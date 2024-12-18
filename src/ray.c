@@ -46,9 +46,9 @@ point3_t ray_color(ray_t ray, sphere_t *world, int depth) {
   if (hit_anything){
     ray_t scattered;
     point3_t attenuation;
-    if (rec.mat.type == metal && scatter_metal(ray, rec, &attenuation, &scattered, rec.mat.albedo)){
+    if (rec.mat.type == metal && scatter_metal(rec, &attenuation, &scattered, rec.mat.albedo)){
       return vec3_mul(attenuation, ray_color(scattered, world, depth-1));
-    } else if (rec.mat.type == lambertian && scatter_lambert(ray, rec, &attenuation, &scattered, rec.mat.albedo)){
+    } else if (rec.mat.type == lambertian && scatter_lambert(rec, &attenuation, &scattered, rec.mat.albedo)){
       return vec3_mul(attenuation, ray_color(scattered, world, depth-1));
     } else {
       point3_t res = {0,0,0};

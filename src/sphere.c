@@ -65,7 +65,7 @@ void set_face_normal( ray_t r, point3_t outward_normal, hit_record *rec) {
         }
 }
 
-bool scatter_metal(ray_t r_in, hit_record rec, point3_t *attenuation, ray_t *scattered, point3_t albedo){
+bool scatter_metal(hit_record rec, point3_t *attenuation, ray_t *scattered, point3_t albedo){
   point3_t reflected = vec3_reflect(rec.normal, vec3_rand_unit());
   scattered->orig = rec.p; scattered->dir = reflected;
   attenuation->x = albedo.x; attenuation->y = albedo.y; attenuation->z = albedo.z;
@@ -73,7 +73,7 @@ bool scatter_metal(ray_t r_in, hit_record rec, point3_t *attenuation, ray_t *sca
   return true;
 }
 
-bool scatter_lambert(ray_t r_in, hit_record rec, point3_t *attenuation, ray_t *scattered, point3_t albedo){
+bool scatter_lambert(hit_record rec, point3_t *attenuation, ray_t *scattered, point3_t albedo){
   point3_t scatter_dir = vec3_sum(rec.normal, vec3_rand_unit());
 
   if (vec3_near_zero(scatter_dir)){
