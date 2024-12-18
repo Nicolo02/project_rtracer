@@ -53,3 +53,14 @@ point3_t ray_color(ray_t ray, sphere_t *world) {
 
   return background_color(ray);
 }
+
+//Restituisce un raggio proveniente dall'origine e diretto verso un punto
+//determinato randomicamente intorno al pixel (i,j)
+ray_t get_ray_sample(int i, int j, point3_t loc_00, point3_t camera_center, point3_t pixel_delta_u, point3_t pixel_delta_v) {
+  double offset_x = random_double() -0.5;
+  double offset_y = random_double() -0.5;
+  point3_t pixel_sample = vec3_sum(loc_00, vec3_sum(vec3_mul_sc(pixel_delta_u, i + offset_x), vec3_mul_sc(pixel_delta_v, j + offset_y)));
+  point3_t ray_direction = vec3_sub(pixel_sample, camera_center);
+  ray_t result = {camera_center, ray_direction};
+  return result; 
+}
