@@ -118,3 +118,11 @@ point3_t vec3_refract(point3_t uv, point3_t n, double etai_over_etat) {
   point3_t result         = vec3_sum(r_out_perp, r_out_parallel);
   return result;
 }
+
+double linear_to_gamma(double linear_component)
+{
+    if (linear_component > 0)
+        return sqrt(linear_component);
+
+    return 0;
+}

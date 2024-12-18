@@ -2,7 +2,7 @@
 # Supporto OpenMP
 find_package(OpenMP)
 if(OpenMP_C_FOUND)
-	add_compile_options(-fopenmp)
+	add_compile_options(/openmp)
 endif()
 
 # Opzioni di compilazione
@@ -42,5 +42,3 @@ target_sources(rtracer PRIVATE
     src/interval.h src/interval.c
     src/main.c
 )
-
-target_link_libraries(rtracer m)
