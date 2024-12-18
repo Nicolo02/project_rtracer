@@ -100,6 +100,8 @@ int main(void)
     fprintf(stderr, "Error opening file %s: %s\n", output, strerror(errno));
     exit(EXIT_FAILURE);
   }
+  
+  point3_t pixel_color;
 
   fprintf(out_fd, "P3\n");
   fprintf(out_fd, "%d %d\n255\n", image_width, image_height);
@@ -108,12 +110,14 @@ int main(void)
   {
     for (int i = 0; i < image_width; i++)
     {
-      point3_t pixel_color = {0, 0, 0};
+      pixel_color.x=0;
+      pixel_color.y=0;
+      pixel_color.z=0;
+
       for (int k = 0; k < num_samples; k++)
       {
         ray_t r = get_ray_sample(i, j, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v);
-        point3_t pixel_color = vec3_sum(ray_color(r, world), pixel_color);
-        printf("ray direction: %f %f %f\n", pixel_color.x, pixel_color.y, pixel_color.z);
+        pixel_color = vec3_sum(ray_color(r, world), pixel_color);
 
         // vec3 pixel_color = {(double)i/(image_width-1),
         // (double)j/(image_height-1), 0};
