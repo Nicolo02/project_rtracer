@@ -2,7 +2,7 @@
 # Supporto OpenMP
 find_package(OpenMP)
 if(OpenMP_C_FOUND)
-	add_compile_options(/openmp)
+	add_compile_options(-fopenmp)
 endif()
 
 # Opzioni di compilazione
@@ -19,6 +19,7 @@ set(HEADERS
     src/utils.h
     src/sphere.h
     src/globals.h
+    src/interval.h
 )
 
 # Aggiungi i file sorgente al progetto
@@ -28,6 +29,7 @@ set(SOURCES
     src/point3.c
     src/ray.c
     src/sphere.c
+    src/interval.c
 )
 
 # Definisci l'eseguibile da costruire
@@ -37,5 +39,8 @@ target_sources(rtracer PRIVATE
     src/sphere.h src/sphere.c
     src/point3.h src/point3.c
     src/utils.h src/utils.c
+    src/interval.h src/interval.c
     src/main.c
 )
+
+target_link_libraries(rtracer m)
