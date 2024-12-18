@@ -1,0 +1,1 @@
+double clamp(double x);
