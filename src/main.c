@@ -112,7 +112,7 @@ int main(void)
 
   RT_DEBUG("pixel00_loc: %f %f %f", pixel00_loc.x, pixel00_loc.y, pixel00_loc.z);
 
-  // Render
+  // Opening output file
   char *output = "./out.ppm";
 
   FILE *out_fd = fopen(output, "w");
@@ -121,11 +121,12 @@ int main(void)
     fprintf(stderr, "Error opening file %s: %s\n", output, strerror(errno));
     exit(EXIT_FAILURE);
   }
-  
-  point3_t pixel_color;
 
   fprintf(out_fd, "P3\n");
   fprintf(out_fd, "%d %d\n255\n", image_width, image_height);
+  
+  //render logic
+  point3_t pixel_color;
 
   for (int j = 0; j < image_height; j++)
   {
@@ -138,8 +139,7 @@ int main(void)
       for (int k = 0; k < num_samples; k++)
       {
         ray_t r = get_ray_sample(i, j, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v);
-        int max_depth = num_depth; //Forse non necessario, ma non voglio che modifichi variabile globale
-        pixel_color = vec3_sum(ray_color(r, world, max_depth), pixel_color);
+        pixel_color = vec3_sum(ray_color(r, world), pixel_color);
       }
 
       write_color(out_fd, vec3_div_sc(pixel_color, num_samples));

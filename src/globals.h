@@ -8,6 +8,6 @@
 #define num_samples 5
 
 //Massimo numero di volte che ray_color viene chiamato in ricorsione
-#define num_depth 5
+#define num_depth 10
 
 #endif
