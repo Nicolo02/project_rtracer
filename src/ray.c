@@ -73,6 +73,7 @@ point3_t ray_color(ray_t ray, sphere_t *world)
     }
 
     hit_anything= false;
+    closest = INFINITY;
   }
   // If we've exceeded the ray bounce limit, no more light is gathered.
   res.x = 0;
