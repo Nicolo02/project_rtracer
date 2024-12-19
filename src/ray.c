@@ -22,7 +22,12 @@ point3_t background_color(ray_t r) {
   return vec3_sum(black_scaled, background_scaled);
 }
 
-point3_t ray_color(ray_t ray, sphere_t *world) {
+point3_t ray_color(ray_t ray, sphere_t *world, int depth) {
+  // If we've exceeded the ray bounce limit, no more light is gathered.
+  if (depth <= 0) {
+    point3_t res = {0,0,0};
+    return res;
+  }
 
   hit_record rec;
   hit_record temp_rec;
@@ -30,15 +35,8 @@ point3_t ray_color(ray_t ray, sphere_t *world) {
   double closest = INFINITY;
 
   for (int i = 0; i < num_s; i++){
-    // Check at what distance the ray intersects the sphere
-    //double dist = sphere_hit_distance(world[i], ray);
 
-    if (hit(ray, 0, closest, &temp_rec, world[i])) {
-      // Calculate the point of intersection between the ray and the sphere
-      // point3_t hit_point = ray_at(ray, dist);
-      // Compute the normal vector at the hit point on the sphere's surface
-      // point3_t normal = vec3_unit_vector(vec3_sub(hit_point, world[i].center));
-
+    if (hit(ray, 0.001, closest, &temp_rec, world[i])) {
       hit_anything = true;
       closest = temp_rec.t;
       rec = temp_rec;
@@ -46,9 +44,16 @@ point3_t ray_color(ray_t ray, sphere_t *world) {
   }
 
   if (hit_anything){
-    //return vec3_mul_sc(vec3_sum_sc(rec.normal, 1), 0.5);
-    ray_t r = {rec.p, vec3_rand_hemisphere(rec.normal) };
-    return vec3_mul_sc(ray_color(r, world), 0.5);
+    ray_t scattered;
+    point3_t attenuation;
+    if (rec.mat.type == metal && scatter_metal(rec, &attenuation, &scattered, rec.mat.albedo)){
+      return vec3_mul(attenuation, ray_color(scattered, world, depth-1));
+    } else if (rec.mat.type == lambertian && scatter_lambert(rec, &attenuation, &scattered, rec.mat.albedo)){
+      return vec3_mul(attenuation, ray_color(scattered, world, depth-1));
+    } else {
+      point3_t res = {0,0,0};
+      return res;
+    }
   }
 
   return background_color(ray);

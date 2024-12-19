@@ -12,9 +12,9 @@
 
 void write_color(FILE *out, point3_t pixel_color)
 {
-  double r = pixel_color.x;
-  double g = pixel_color.y;
-  double b = pixel_color.z;
+  double r = linear_to_gamma(pixel_color.x);
+  double g = linear_to_gamma(pixel_color.y);
+  double b = linear_to_gamma(pixel_color.z);
 
   // Translate the [0,1] component values to the byte range [0,255].
   int rbyte = (int)(255.999 * clamp(r));
@@ -41,15 +41,36 @@ int main(void)
   // World
   // Cambiare il numero di num_s dentro globals.h per definire la grandezza dell'array
   sphere_t world[num_s];
+  material mat;
 
-  point3_t temp = {0, 0, -1};
+  point3_t temp = {0, -100.5, -1};
+  point3_t alb_temp = {0.8,0.8,0.0};
+  mat.type = lambertian; mat.albedo = alb_temp;
   world[0].center = temp;
-  world[0].radius = 0.5;
-  temp.x = 0;
-  temp.y = -100.5;
-  temp.z = -1;
+  world[0].radius = 100;
+  world[0].mat = mat;
+
+  temp.x = 0; temp.y = 0; temp.z = -1.2;
+  alb_temp.x = 0.1; alb_temp.y = 0.2; alb_temp.z = 0.5;
   world[1].center = temp;
-  world[1].radius = 100;
+  world[1].radius = 0.5;
+  mat.albedo = alb_temp;
+  world[1].mat = mat;
+
+  temp.x = -1.0; temp.y = 0; temp.z = -1.0;
+  alb_temp.x = 0.8; alb_temp.y = 0.8; alb_temp.z = 0.8;
+  world[2].center = temp;
+  world[2].radius = 0.5;
+  mat.type = metal;
+  mat.albedo = alb_temp;
+  world[2].mat = mat;
+
+  temp.x = 1.0; temp.y = 0; temp.z = -1.0;
+  alb_temp.x = 0.8; alb_temp.y = 0.6; alb_temp.z = 0.2;
+  world[3].center = temp;
+  world[3].radius = 0.5;
+  mat.albedo = alb_temp;
+  world[3].mat = mat;
 
   // Camera
   double focal_length = 1.0;
@@ -117,10 +138,8 @@ int main(void)
       for (int k = 0; k < num_samples; k++)
       {
         ray_t r = get_ray_sample(i, j, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v);
-        pixel_color = vec3_sum(ray_color(r, world), pixel_color);
-
-        // vec3 pixel_color = {(double)i/(image_width-1),
-        // (double)j/(image_height-1), 0};
+        int max_depth = num_depth; //Forse non necessario, ma non voglio che modifichi variabile globale
+        pixel_color = vec3_sum(ray_color(r, world, max_depth), pixel_color);
       }
 
       write_color(out_fd, vec3_div_sc(pixel_color, num_samples));

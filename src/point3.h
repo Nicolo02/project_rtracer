@@ -28,4 +28,6 @@ point3_t vec3_rand_hemisphere(point3_t normal);
 point3_t vec3_reflect(point3_t vec1, point3_t vec2);                   // Riflessione
 point3_t vec3_refract(point3_t uv, point3_t n, double etai_over_etat); // Rifrazione
 
+double linear_to_gamma(double linear_component);
+
 #endif // VEC3_H
