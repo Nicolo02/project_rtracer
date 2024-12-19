@@ -112,7 +112,7 @@ int main(void)
 
   RT_DEBUG("pixel00_loc: %f %f %f", pixel00_loc.x, pixel00_loc.y, pixel00_loc.z);
 
-  // Render
+  // Opening output file
   char *output = "./out.ppm";
 
   FILE *out_fd = fopen(output, "w");
@@ -121,11 +121,12 @@ int main(void)
     fprintf(stderr, "Error opening file %s: %s\n", output, strerror(errno));
     exit(EXIT_FAILURE);
   }
-  
-  point3_t pixel_color;
 
   fprintf(out_fd, "P3\n");
   fprintf(out_fd, "%d %d\n255\n", image_width, image_height);
+  
+  //render logic
+  point3_t pixel_color;
 
   for (int j = 0; j < image_height; j++)
   {

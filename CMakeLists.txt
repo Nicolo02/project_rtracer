@@ -1,4 +1,7 @@
-# Link delle librerie matematiche (solo per GCC/Clang)
+cmake_minimum_required(VERSION 3.22)
+project(rtracer LANGUAGES C CUDA)
+find_package(CUDA  REQUIRED)
+include_directories("${CUDA_INCLUDE_DIRS}")
 # Supporto OpenMP
 find_package(OpenMP)
 if(OpenMP_C_FOUND)
@@ -48,6 +51,7 @@ target_sources(rtracer PRIVATE
     src/main.c
 )
 
+# Link delle librerie matematiche (solo per GCC/Clang)
 if(UNIX)
 target_link_libraries(rtracer m)
 endif(UNIX)
