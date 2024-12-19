@@ -139,8 +139,7 @@ int main(void)
       for (int k = 0; k < num_samples; k++)
       {
         ray_t r = get_ray_sample(i, j, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v);
-        int max_depth = num_depth; //Forse non necessario, ma non voglio che modifichi variabile globale
-        pixel_color = vec3_sum(ray_color(r, world, max_depth), pixel_color);
+        pixel_color = vec3_sum(ray_color(r, world), pixel_color);
       }
 
       write_color(out_fd, vec3_div_sc(pixel_color, num_samples));

@@ -52,14 +52,12 @@ point3_t ray_color(ray_t ray, sphere_t *world)
       if (rec.mat.type == metal && scatter_metal(rec, &attenuation, &scattered, rec.mat.albedo))
       {
         res = vec3_mul(attenuation, res);
-        cur_ray.dir = scattered.dir;
-        cur_ray.orig = scattered.orig;
+        cur_ray = scattered;
       }
       else if (rec.mat.type == lambertian && scatter_lambert(rec, &attenuation, &scattered, rec.mat.albedo))
       {
         res = vec3_mul(attenuation, res);
-        cur_ray.dir = scattered.dir;
-        cur_ray.orig = scattered.orig;
+        cur_ray = scattered;
       }
       else
       {
