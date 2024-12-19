@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 project(rtracer LANGUAGES C CUDA)
-find_package(CUDA  REQUIRED)
+find_package(CUDA REQUIRED)
 include_directories("${CUDA_INCLUDE_DIRS}")
 # Supporto OpenMP
 find_package(OpenMP)
@@ -20,8 +20,12 @@ elseif (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
     add_compile_options(/W4 /WX) # Equivalente per MSVC
 endif()
 
+# Opzioni di compilazione per CUDA
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=-Wall,-Wextra,-Wpedantic")
+
 # Aggiungi i file di intestazione al progetto
 set(HEADERS
+    src/render.h
     src/ray.h
     src/point3.h
     src/utils.h
@@ -32,6 +36,7 @@ set(HEADERS
 
 # Aggiungi i file sorgente al progetto
 set(SOURCES
+    src/render.cu
     src/main.c
     src/utils.c
     src/point3.c
@@ -43,6 +48,7 @@ set(SOURCES
 # Definisci l'eseguibile da costruire
 add_executable(rtracer ${SOURCES} ${HEADERS})
 target_sources(rtracer PRIVATE
+    src/render.h src/render.cu
     src/ray.h src/ray.c
     src/sphere.h src/sphere.c
     src/point3.h src/point3.c
@@ -50,6 +56,10 @@ target_sources(rtracer PRIVATE
     src/interval.h src/interval.c
     src/main.c
 )
+
+set_target_properties(rtracer PROPERTIES CUDA_ARCHITECTURES "native")
+
+set_target_properties(rtracer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 # Link delle librerie matematiche (solo per GCC/Clang)
 if(UNIX)

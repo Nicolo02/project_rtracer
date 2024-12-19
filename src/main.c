@@ -9,6 +9,7 @@
 #include "ray.h"
 #include "globals.h"
 #include "interval.h"
+#include "render.h"
 
 void write_color(FILE *out, point3_t pixel_color)
 {
@@ -124,8 +125,18 @@ int main(void)
 
   fprintf(out_fd, "P3\n");
   fprintf(out_fd, "%d %d\n255\n", image_width, image_height);
-  
+
+  // Allocate host memory for the pixel buffer
+  point3_t *host_pixel_buffer = (point3_t *)malloc(image_width * image_height * sizeof(point3_t));
+  if (host_pixel_buffer == NULL)
+  {
+    fprintf(stderr, "Error allocating memory for pixel buffer\n");
+    exit(EXIT_FAILURE);
+  }
+
   //render logic
+  //render(host_pixel_buffer);
+
   point3_t pixel_color;
 
   for (int j = 0; j < image_height; j++)

@@ -1,5 +1,6 @@
-#include "render.cuh"
+#include "render.h"
 
-int render() {
-    return 0;
+void render(int ok) {
+    (void) ok;
+    return;
 }
