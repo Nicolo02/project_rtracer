@@ -2,26 +2,6 @@ cmake_minimum_required(VERSION 3.22)
 project(rtracer LANGUAGES C CUDA)
 find_package(CUDA REQUIRED)
 include_directories("${CUDA_INCLUDE_DIRS}")
-# Supporto OpenMP
-find_package(OpenMP)
-if(OpenMP_C_FOUND)
-if(WIN32)
-    add_compile_options(/openmp)
-endif(WIN32)
-if(UNIX)
-	add_compile_options(-fopenmp)
-endif(UNIX)
-endif()
-
-# Opzioni di compilazione
-if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(-Wall -Wextra -Wpedantic -Werror)
-elseif (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
-    add_compile_options(/W4 /WX) # Equivalente per MSVC
-endif()
-
-# Opzioni di compilazione per CUDA
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=-Wall,-Wextra,-Wpedantic")
 
 # Aggiungi i file di intestazione al progetto
 set(HEADERS
@@ -57,7 +37,9 @@ target_sources(rtracer PRIVATE
     src/main.c
 )
 
-set_target_properties(rtracer PROPERTIES CUDA_ARCHITECTURES "native")
+set_source_files_properties(render.cu PROPERTIES LANGUAGE CUDA)
+
+set_target_properties(rtracer PROPERTIES CUDA_ARCHITECTURES "60;75")
 
 set_target_properties(rtracer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 

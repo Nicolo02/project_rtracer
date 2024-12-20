@@ -1,6 +1,6 @@
 #include "render.h"
 
-void render(int ok) {
+__device__ void render(int ok) {
     (void) ok;
     return;
 }

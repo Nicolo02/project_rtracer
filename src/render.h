@@ -1,3 +1,3 @@
 #include "utils.h"
 
-void render(int ok);
+__device__ void render(int ok);
