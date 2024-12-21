@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.22)
-project(rtracer LANGUAGES C CUDA)
+project(rtracer LANGUAGES CUDA C)
+
 find_package(CUDA REQUIRED)
 include_directories("${CUDA_INCLUDE_DIRS}")
+
+set(CUDA_SEPARABLE_COMPILATION ON)
 
 # Aggiungi i file di intestazione al progetto
 set(HEADERS
@@ -36,8 +39,6 @@ target_sources(rtracer PRIVATE
     src/interval.h src/interval.c
     src/main.c
 )
-
-set_source_files_properties(render.cu PROPERTIES LANGUAGE CUDA)
 
 set_target_properties(rtracer PROPERTIES CUDA_ARCHITECTURES "60;75")
 

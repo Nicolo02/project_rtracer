@@ -135,7 +135,7 @@ int main(void)
   }
 
   //render logic
-  //render(host_pixel_buffer);
+  render(host_pixel_buffer, image_width, image_height, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v, world);
 
   point3_t pixel_color;
 
