@@ -40,7 +40,7 @@ target_sources(rtracer PRIVATE
     src/main.c
 )
 
-set_target_properties(rtracer PROPERTIES CUDA_ARCHITECTURES "60;75")
+set_target_properties(rtracer PROPERTIES CUDA_ARCHITECTURES "75")
 
 set_target_properties(rtracer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 

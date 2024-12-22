@@ -11,18 +11,23 @@
 #include "interval.h"
 #include "render.h"
 
-void write_color(FILE *out, point3_t pixel_color)
+void write_color(FILE *out, point3_t* pixel_color, int image_width, int image_height)
 {
-  double r = linear_to_gamma(pixel_color.x);
-  double g = linear_to_gamma(pixel_color.y);
-  double b = linear_to_gamma(pixel_color.z);
+  for (int j = image_height - 1; j >= 0; --j) {
+    for (int i = 0; i < image_width; ++i) {
+      point3_t pixel = pixel_color[j * image_width + i];
+      double r = linear_to_gamma(pixel.x);
+      double g = linear_to_gamma(pixel.y);
+      double b = linear_to_gamma(pixel.z);
 
-  // Translate the [0,1] component values to the byte range [0,255].
-  int rbyte = (int)(255.999 * clamp(r));
-  int gbyte = (int)(255.999 * clamp(g));
-  int bbyte = (int)(255.999 * clamp(b));
+      // Translate the [0,1] component values to the byte range [0,255].
+      int rbyte = (int)(255.999 * clamp(r));
+      int gbyte = (int)(255.999 * clamp(g));
+      int bbyte = (int)(255.999 * clamp(b));
 
-  fprintf(out, "%d %d %d\n", rbyte, gbyte, bbyte);
+      fprintf(out, "%d %d %d\n", rbyte, gbyte, bbyte);
+    }
+  }
 }
 
 int main(void)
@@ -46,7 +51,7 @@ int main(void)
 
   point3_t temp = {0, -100.5, -1};
   point3_t alb_temp = {0.8,0.8,0.0};
-  mat.type = lambertian; mat.albedo = alb_temp;
+  mat.t = lambertian; mat.albedo = alb_temp;
   world[0].center = temp;
   world[0].radius = 100;
   world[0].mat = mat;
@@ -62,7 +67,7 @@ int main(void)
   alb_temp.x = 0.8; alb_temp.y = 0.8; alb_temp.z = 0.8;
   world[2].center = temp;
   world[2].radius = 0.5;
-  mat.type = metal;
+  mat.t = metal;
   mat.albedo = alb_temp;
   world[2].mat = mat;
 
@@ -135,27 +140,9 @@ int main(void)
   }
 
   //render logic
-  render(host_pixel_buffer, image_width, image_height, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v, world);
+  render(host_pixel_buffer, num_samples, image_width, image_height, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v, world);
 
-  point3_t pixel_color;
-
-  for (int j = 0; j < image_height; j++)
-  {
-    for (int i = 0; i < image_width; i++)
-    {
-      pixel_color.x=0;
-      pixel_color.y=0;
-      pixel_color.z=0;
-
-      for (int k = 0; k < num_samples; k++)
-      {
-        ray_t r = get_ray_sample(i, j, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v);
-        pixel_color = vec3_sum(ray_color(r, world), pixel_color);
-      }
-
-      write_color(out_fd, vec3_div_sc(pixel_color, num_samples));
-    }
-  }
+  write_color(out_fd, host_pixel_buffer, image_width, image_height);
 
   /* chiude il file */
   fclose(out_fd);

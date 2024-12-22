@@ -4,17 +4,18 @@
 #include <stdbool.h>
 #include "utils.h"
 
-point3_t vec3_sum(point3_t vec1, point3_t vec2);     // Somma tra due vettori
-point3_t vec3_sub(point3_t vec1, point3_t vec2);     // Differenza tra due vettori
-point3_t vec3_mul(point3_t vec1, point3_t vec2);     // Prodotto vettoriale
+__host__ __device__ point3_t vec3_sum(point3_t vec1, point3_t vec2);     // Somma tra due vettori
+__host__ __device__ point3_t vec3_sub(point3_t vec1, point3_t vec2);     // Differenza tra due vettori
+__device__ point3_t vec3_mul(point3_t vec1, point3_t vec2);     // Prodotto vettoriale
 double vec3_dot(point3_t vec1, point3_t vec2);     // Prodotto scalare
 double vec3_len(point3_t vec);                   // Lunghezza del vettore
 double vec3_len_sq(point3_t vec);                // Lunghezza al quadrato
 point3_t vec3_sum_sc(point3_t vec, double scalar); // Somma con uno scalare
-point3_t vec3_mul_sc(point3_t vec, double scalar); // Moltip. per uno scalare
-point3_t vec3_div_sc(point3_t vec1, double vec2);  // Divisione per uno scalare
+__host__ __device__ point3_t vec3_mul_sc(point3_t vec, double scalar); // Moltip. per uno scalare
+__host__ __device__ point3_t vec3_div_sc(point3_t vec1, double vec2);  // Divisione per uno scalare
 point3_t vec3_cross(point3_t vec1, point3_t vec2);   // Prodotto vettoriale
-point3_t vec3_unit_vector(point3_t vec);           // Versore del vettore
+// Versore del vettore
+__device__ point3_t vec3_unit_vector(point3_t vec);
 
 // Restituisce true se il vettore è vicino a zero in tutte le dimensioni
 bool vec3_near_zero(point3_t v);

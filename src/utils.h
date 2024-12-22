@@ -1,3 +1,4 @@
+#pragma once
 #ifndef UTILS_H
 #define UTILS_H
 
@@ -66,8 +67,10 @@ typedef struct {
   double z;
 } point3_t;
 
+typedef enum {metal, lambertian} type;
+
 typedef struct {
-  enum {metal, lambertian} type;
+  type t;
   point3_t albedo;
 } material;
 
@@ -91,9 +94,9 @@ typedef struct {
 } hit_record;
 
 // Genera un numero casuale tra 0 e 1
-double random_double(void);
+__host__ __device__ double random_double(void);
 
 // Genera un numero casuale tra 0 e 1
-double random_double_range(double min, double max);
+__host__ __device__ double random_double_range(double min, double max);
 
 #endif

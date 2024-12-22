@@ -3,7 +3,7 @@
 #include "point3.h"
 #include "utils.h"
 
-point3_t vec3_sum(point3_t one, point3_t two) {
+__host__ __device__ point3_t vec3_sum(point3_t one, point3_t two) {
   point3_t result = {one.x + two.x, one.y + two.y, one.z + two.z};
   return result;
 }
@@ -18,7 +18,7 @@ point3_t vec3_sub(point3_t one, point3_t two) {
   return result;
 }
 
-point3_t vec3_mul(point3_t one, point3_t two) {
+__device__ point3_t vec3_mul(point3_t one, point3_t two) {
   point3_t result = {one.x * two.x, one.y * two.y, one.z * two.z};
   return result;
 }
@@ -28,7 +28,7 @@ point3_t vec3_mul_sc(point3_t one, double two) {
   return vec3_mul(one, two_vec);
 }
 
-point3_t vec3_div_sc(point3_t one, double two) {
+__host__ __device__ point3_t vec3_div_sc(point3_t one, double two) {
   point3_t result = {one.x / two, one.y / two, one.z / two};
   return result;
 }
