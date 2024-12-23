@@ -1,4 +1,5 @@
 #include "ray.h"
+#include "utils.h" // aggiunto io per le struct, se sbagliato leva pure
 
 __global__ void kernelrender(point3_t *device_buffer, int* device_num_samples, int *device_image_width, int *device_image_height, point3_t *device_loc00, point3_t *device_camera_center,
                                        point3_t *device_pixel_delta_u, point3_t *device_pixel_delta_v, sphere_t *device_world);

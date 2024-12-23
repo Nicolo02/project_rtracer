@@ -3,34 +3,9 @@
 #include "point3.h"
 #include "utils.h"
 
-__host__ __device__ point3_t vec3_sum(point3_t one, point3_t two) {
-  point3_t result = {one.x + two.x, one.y + two.y, one.z + two.z};
-  return result;
-}
-
 point3_t vec3_sum_sc(point3_t one, double two) {
   point3_t two_vec = {two, two, two};
   return vec3_sum(one, two_vec);
-}
-
-point3_t vec3_sub(point3_t one, point3_t two) {
-  point3_t result = {one.x - two.x, one.y - two.y, one.z - two.z};
-  return result;
-}
-
-__device__ point3_t vec3_mul(point3_t one, point3_t two) {
-  point3_t result = {one.x * two.x, one.y * two.y, one.z * two.z};
-  return result;
-}
-
-point3_t vec3_mul_sc(point3_t one, double two) {
-  point3_t two_vec = {two, two, two};
-  return vec3_mul(one, two_vec);
-}
-
-__host__ __device__ point3_t vec3_div_sc(point3_t one, double two) {
-  point3_t result = {one.x / two, one.y / two, one.z / two};
-  return result;
 }
 
 double vec3_len(point3_t one) { return sqrt(vec3_len_sq(one)); }
@@ -69,8 +44,6 @@ point3_t vec3_cross(point3_t u, point3_t v) {
   };
   return result;
 }
-
-point3_t vec3_unit_vector(point3_t v) { return vec3_div_sc(v, vec3_len(v)); }
 
 point3_t vec3_rand_unit_disk() {
   while (true) {
