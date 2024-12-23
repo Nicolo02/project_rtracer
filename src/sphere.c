@@ -27,11 +27,3 @@ double sphere_hit_distance(sphere_t s, ray_t r) {
   }
 }
 
-void set_face_normal( ray_t r, point3_t outward_normal, hit_record *rec) {
-        rec->front_face = vec3_dot(r.dir, outward_normal) < 0;
-        if (rec->front_face){
-          rec->normal = outward_normal;
-        } else {
-          rec->normal = vec3_mul_sc(outward_normal, -1);
-        }
-}

@@ -7,6 +7,5 @@
 #include "sphere.h"
 #include "globals.h"
 
-point3_t ray_at(ray_t r, double t);
 
 #endif

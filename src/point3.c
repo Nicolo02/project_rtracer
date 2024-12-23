@@ -8,16 +8,8 @@ point3_t vec3_sum_sc(point3_t one, double two) {
   return vec3_sum(one, two_vec);
 }
 
-double vec3_len(point3_t one) { return sqrt(vec3_len_sq(one)); }
-
-double vec3_len_sq(point3_t one) {
-  double result = one.x * one.x + one.y * one.y + one.z * one.z;
-  return result;
-}
-
-bool vec3_near_zero(point3_t v) {
-  double s = 1e-8; // Soglia di tolleranza
-  return (fabs(v.x) < s) && (fabs(v.y) < s) && (fabs(v.z) < s);
+double vec3_len_sq(point3_t vec) {
+  return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z;
 }
 
 point3_t vec3_rand() {
@@ -72,13 +64,6 @@ point3_t vec3_rand_hemisphere(point3_t normal) {
   } else {
     return vec3_mul_sc(in_unit_sphere, -1);
   }
-}
-
-point3_t vec3_reflect(point3_t vec, point3_t norm) {
-  double dot_product = 2 * vec3_dot(vec, norm);
-  point3_t scaled_n    = vec3_mul_sc(norm, dot_product);
-  point3_t result      = vec3_sub(vec, scaled_n);
-  return result;
 }
 
 point3_t vec3_refract(point3_t uv, point3_t n, double etai_over_etat) {
