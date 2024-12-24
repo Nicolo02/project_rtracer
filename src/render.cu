@@ -245,7 +245,7 @@ __global__ void kernelrender(double* device_rand_nums, point3_t *device_buffer, 
     pixel_color.x = 0;
     pixel_color.y = 0;
     pixel_color.z = 0;
-    point3_t rand_unit = {device_rand_nums[(j*blockDim.x + i)*4 + 2], device_rand_nums[(j*blockDim.x + i)*4 + 3], 0};
+    point3_t rand_unit = {2*device_rand_nums[(j*blockDim.x + i)*4 + 2], 2*device_rand_nums[(j*blockDim.x + i)*4 + 3], 0};
 
     for (int k = 0; k < *device_num_samples; k++)
     {
@@ -320,6 +320,8 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
                 rand_nums[index + 2] = 2 * (random_double() - 0.5);
                 rand_nums[index + 3] = 2 * (random_double() - 0.5);
             } while (rand_nums[index + 2] * rand_nums[index + 2] + rand_nums[index + 3] * rand_nums[index + 3] >= 1.0);
+            rand_nums[index + 2] = rand_nums[index + 2]/2;
+            rand_nums[index + 3] = rand_nums[index + 3]/2;
         }
     }
     j--;i--;
