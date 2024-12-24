@@ -2,6 +2,27 @@
 
 // ATTENZIONE: Da  qui funzioni solo __device__ trasposte qui
 // AGGIUNTO in render.h la inclusione del file utils.h, se da errore, togli
+double random_double() { return rand() / (RAND_MAX + 1.0); }
+
+__device__ point3_t vec3_mul_sc_CUDA(point3_t one, double two) { // Moltip. per uno scalare
+  point3_t result = {one.x * two, one.y * two, one.z * two};
+  return result;
+}
+
+__device__ point3_t vec3_div_sc_CUDA(point3_t one, double two) { // Divisione per uno scalare
+  point3_t result = {one.x / two, one.y / two, one.z / two};
+  return result;
+}
+
+__device__ point3_t vec3_sum_CUDA(point3_t one, point3_t two) { // Somma tra due vettori
+  point3_t result = {one.x + two.x, one.y + two.y, one.z + two.z};
+  return result;
+}
+__device__ point3_t vec3_sub_CUDA(point3_t one, point3_t two) { // Differenza tra due vettori
+  point3_t result = {one.x - two.x, one.y - two.y, one.z - two.z};
+  return result;
+}
+
 __device__ double vec3_len_sq(point3_t one)
 {
     double result = one.x * one.x + one.y * one.y + one.z * one.z;
@@ -16,7 +37,7 @@ __device__ double vec3_dot(point3_t u, point3_t v)
     return result;
 }
 
-__device__ point3_t vec3_unit_vector(point3_t v) { return vec3_div_sc(v, vec3_len(v)); }
+__device__ point3_t vec3_unit_vector(point3_t v) { return vec3_div_sc_CUDA(v, vec3_len(v)); }
 
 __device__ point3_t vec3_mul(point3_t v, point3_t t)
 {
@@ -46,13 +67,13 @@ __device__ void set_face_normal(ray_t r, point3_t outward_normal, hit_record *re
     }
     else
     {
-        rec->normal = vec3_mul_sc(outward_normal, -1);
+        rec->normal = vec3_mul_sc_CUDA(outward_normal, -1);
     }
 }
 
 __device__ bool hit(ray_t r, double ray_tmin, double ray_tmax, hit_record *rec, sphere_t s)
 {
-    point3_t oc = vec3_sub(s.center, r.orig);
+    point3_t oc = vec3_sub_CUDA(s.center, r.orig);
     double a = vec3_dot(r.dir, r.dir);
     double h = vec3_dot(r.dir, oc);
     double c = vec3_dot(oc, oc) - s.radius * s.radius;
@@ -74,7 +95,7 @@ __device__ bool hit(ray_t r, double ray_tmin, double ray_tmax, hit_record *rec, 
 
     rec->t = root;
     rec->p = ray_at(r, rec->t);
-    point3_t outward_normal = vec3_div_sc((vec3_sub(rec->p, s.center)), s.radius);
+    point3_t outward_normal = vec3_div_sc_CUDA((vec3_sub_CUDA(rec->p, s.center)), s.radius);
     set_face_normal(r, outward_normal, rec);
     rec->mat = s.mat;
 
@@ -84,8 +105,8 @@ __device__ bool hit(ray_t r, double ray_tmin, double ray_tmax, hit_record *rec, 
 __device__ point3_t vec3_reflect(point3_t vec, point3_t norm)
 {
     double dot_product = 2 * vec3_dot(vec, norm);
-    point3_t scaled_n = vec3_mul_sc(norm, dot_product);
-    point3_t result = vec3_sub(vec, scaled_n);
+    point3_t scaled_n = vec3_mul_sc_CUDA(norm, dot_product);
+    point3_t result = vec3_sub_CUDA(vec, scaled_n);
     return result;
 }
 
@@ -109,7 +130,7 @@ __device__ bool vec3_near_zero(point3_t v)
 
 __device__ bool scatter_lambert(hit_record rec, point3_t rand_unit, point3_t *attenuation, ray_t *scattered, point3_t albedo)
 {
-    point3_t scatter_dir = vec3_sum(rec.normal, rand_unit);
+    point3_t scatter_dir = vec3_sum_CUDA(rec.normal, rand_unit);
 
     if (vec3_near_zero(scatter_dir))
     {
@@ -133,10 +154,10 @@ __device__ point3_t background_color(ray_t r)
     point3_t unit_direction = vec3_unit_vector(r.dir);
     double blend_factor = 0.5 * (unit_direction.y + 1.0);
 
-    point3_t black_scaled = vec3_mul_sc(black, 1.0 - blend_factor);
-    point3_t background_scaled = vec3_mul_sc(background_col, blend_factor);
+    point3_t black_scaled = vec3_mul_sc_CUDA(black, 1.0 - blend_factor);
+    point3_t background_scaled = vec3_mul_sc_CUDA(background_col, blend_factor);
 
-    return vec3_sum(black_scaled, background_scaled);
+    return vec3_sum_CUDA(black_scaled, background_scaled);
 }
 
 __device__ point3_t ray_color(ray_t ray, sphere_t *world, point3_t rand_unit)
@@ -199,8 +220,8 @@ __device__ point3_t ray_color(ray_t ray, sphere_t *world, point3_t rand_unit)
 
 __device__ ray_t get_ray_sample(double offset_x, double offset_y, int i, int j, point3_t loc_00, point3_t camera_center, point3_t pixel_delta_u, point3_t pixel_delta_v)
 {
-    point3_t pixel_sample = vec3_sum(loc_00, vec3_sum(vec3_mul_sc(pixel_delta_u, i + offset_x), vec3_mul_sc(pixel_delta_v, j + offset_y)));
-    point3_t ray_direction = vec3_sub(pixel_sample, camera_center);
+    point3_t pixel_sample = vec3_sum_CUDA(loc_00, vec3_sum_CUDA(vec3_mul_sc_CUDA(pixel_delta_u, i + offset_x), vec3_mul_sc_CUDA(pixel_delta_v, j + offset_y)));
+    point3_t ray_direction = vec3_sub_CUDA(pixel_sample, camera_center);
     ray_t result = {camera_center, ray_direction};
     return result;
 }
@@ -223,15 +244,15 @@ __global__ void kernelrender(double* device_rand_nums, point3_t *device_buffer, 
     pixel_color.x = 0;
     pixel_color.y = 0;
     pixel_color.z = 0;
-    point3_t rand_unit = {device_rand_nums[2], device_rand_nums[3], device_rand_nums[4]};
+    point3_t rand_unit = {device_rand_nums[(j*blockDim.x + i)*4 + 2], device_rand_nums[(j*blockDim.x + i)*4 + 3], 0};
 
     for (int k = 0; k < *device_num_samples; k++)
     {
-        ray_t r = get_ray_sample(device_rand_nums[0], device_rand_nums[1], i, j, *device_loc00, *device_camera_center, *device_pixel_delta_u, *device_pixel_delta_v);
-        pixel_color = vec3_sum(ray_color(r, device_world, rand_unit), pixel_color);
+        ray_t r = get_ray_sample(device_rand_nums[(j*blockDim.x + i)*4 + k], device_rand_nums[(j*blockDim.x + i)*4 + 1 + k], i, j, *device_loc00, *device_camera_center, *device_pixel_delta_u, *device_pixel_delta_v);
+        pixel_color = vec3_sum_CUDA(ray_color(r, device_world, rand_unit), pixel_color);
     }
 
-    device_buffer[j * *device_image_width + i] = vec3_div_sc(pixel_color, *device_num_samples);
+    device_buffer[j * *device_image_width + i] = vec3_div_sc_CUDA(pixel_color, *device_num_samples);
 }
 
 // FINE KERNEL
@@ -284,26 +305,35 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
     cudaMemcpy(device_world, world, sizeof(sphere_t), cudaMemcpyHostToDevice);
 
     // allocating random number vector for threads
-    double rand_nums[sizeof(image_width * image_height)][5];
-    for (int j = 0; j < image_height; j++)
-    {
-        for (int i = 0; i < image_width; i++)
-        {
-            rand_nums[j * image_width + i][0] = random_double() - 0.5;
-            rand_nums[j * image_width + i][1] = random_double() - 0.5;
+    double *rand_nums = (double *) malloc((image_width * image_height * 4 + n_samples) * sizeof(double));
+    int j, i;
+    for (j = 0; j < image_height; j++) {
+        for (i = 0; i < image_width; i++) {
+            int index = (j * image_width + i) * 4;  // Calcola l'indice lineare
+
+            // Assegna i valori all'array
+            rand_nums[index] = random_double() - 0.5;
+            rand_nums[index + 1] = random_double() - 0.5;
+
             do {
-                rand_nums[j * image_width + i][2] = 2 * (random_double() - 0.5);
-                rand_nums[j * image_width + i][3] = 2 * (random_double() - 0.5);
-            } while (rand_nums[j * image_width + i][2] * rand_nums[j * image_width + i][2] + rand_nums[j * image_width + i][3] * rand_nums[j * image_width + i][3] >= 1.0);
-            rand_nums[j * image_width + i][4] = 0;
+                rand_nums[index + 2] = 2 * (random_double() - 0.5);
+                rand_nums[index + 3] = 2 * (random_double() - 0.5);
+            } while (rand_nums[index + 2] * rand_nums[index + 2] + rand_nums[index + 3] * rand_nums[index + 3] >= 1.0);
         }
+    }
+    j--;i--;
+    for (int k = 0; k < n_samples; k++){
+        rand_nums[(j * image_width + i) * 4 + k] = random_double() - 0.5;
     }
 
     double *device_rand_nums;
-    checkCudaError(cudaMalloc((void **)&device_rand_nums, image_width * image_height * sizeof(double[2])), "Failed to allocate device_rand_nums");
+    checkCudaError(cudaMalloc((void **)&device_rand_nums, (image_width * image_height * 4 + n_samples) * sizeof(double)), "Failed to allocate device_rand_nums");
     cudaMemcpy(device_rand_nums, rand_nums, image_width * image_height * sizeof(double[2]), cudaMemcpyHostToDevice);
 
-    kernelrender<<<8, 8>>>(device_rand_nums, device_buffer, device_num_samples, device_image_width, device_image_height, device_loc00, device_camera_center, device_pixel_delta_u, device_pixel_delta_v, device_world);
+    dim3 grid(1, image_height, 1);
+    dim3 block(image_width, 1, 1);
+
+    kernelrender<<<grid, block>>>(device_rand_nums, device_buffer, device_num_samples, device_image_width, device_image_height, device_loc00, device_camera_center, device_pixel_delta_u, device_pixel_delta_v, device_world);
     cudaDeviceSynchronize();
 
     cudaMemcpy(host_buffer, device_buffer, image_width * image_height * sizeof(point3_t), cudaMemcpyDeviceToHost);
@@ -317,6 +347,7 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
     cudaFree(device_pixel_delta_u);
     cudaFree(device_pixel_delta_v);
     cudaFree(device_world);
+    free(rand_nums);
 
     return;
 }

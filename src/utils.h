@@ -65,7 +65,7 @@ typedef struct {
   double x;
   double y;
   double z;
-} point3_t;
+} __attribute__((aligned(8))) point3_t;
 
 typedef enum {metal, lambertian} type;
 
@@ -94,11 +94,9 @@ typedef struct {
 } hit_record;
 
 // Genera un numero casuale tra 0 e 1
-__host__ __device__ double random_double() { return rand() / (RAND_MAX + 1.0); }
+__host__ double random_double();
 
 // Genera un numero casuale tra 0 e 1
-__host__ __device__ double random_double_range(double min, double max) {
-  return min + (max - min) * random_double();
-}
+__host__ double random_double_range(double min, double max);
 
 #endif
