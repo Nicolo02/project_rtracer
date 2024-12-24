@@ -13,7 +13,7 @@
 
 void write_color(FILE *out, point3_t* pixel_color, int image_width, int image_height)
 {
-  for (int j = image_height - 1; j >= 0; --j) {
+  for (int j = 0; j < image_height; j++) {
     for (int i = 0; i < image_width; ++i) {
       point3_t pixel = pixel_color[j * image_width + i];
       double r = linear_to_gamma(pixel.x);
@@ -35,7 +35,7 @@ int main(void)
 
   // Image
   double aspect_ratio = 16.0 / 9.0;
-  int image_width = 1024;
+  int image_width = 256;
 
   // Calculate the image height, and ensure that it's at least 1.
   int image_height = (int)(image_width / aspect_ratio);
@@ -85,7 +85,7 @@ int main(void)
 
   RT_DEBUG("viewport: %f %f", viewport_width, viewport_height);
 
-  point3_t camera_center = {0, 0, 0}; // doveva essere un point3
+  point3_t camera_center = {0, 0, 0};
   RT_DEBUG("camera_center: %f %f %f", camera_center.x, camera_center.y, camera_center.z);
 
   // Calculate the vectors across the horizontal and down the vertical viewport
@@ -141,6 +141,12 @@ int main(void)
 
   //render logic
   render(host_pixel_buffer, num_samples, image_width, image_height, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v, world);
+  for (int j = image_height - 1; j >= 0; --j) {
+    for (int i = 0; i < image_width; ++i) {
+      point3_t pixel = host_pixel_buffer[j * image_width + i];
+      //printf("\nFIN: %f, %f, %f\n", pixel.x, pixel.y, pixel.z);
+    }
+  }
 
   write_color(out_fd, host_pixel_buffer, image_width, image_height);
 

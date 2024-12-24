@@ -65,7 +65,7 @@ typedef struct {
   double x;
   double y;
   double z;
-} __attribute__((aligned(8))) point3_t;
+} point3_t;
 
 typedef enum {metal, lambertian} type;
 

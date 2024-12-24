@@ -169,8 +169,6 @@ __device__ point3_t ray_color(ray_t ray, sphere_t *world, point3_t rand_unit)
     point3_t res = {1, 1, 1};
     ray_t cur_ray = ray;
 
-    ray_t scattered;
-    point3_t attenuation;
     for (int k = 0; k < num_depth; k++)
     {
         for (int i = 0; i < num_s; i++)
@@ -185,12 +183,15 @@ __device__ point3_t ray_color(ray_t ray, sphere_t *world, point3_t rand_unit)
 
         if (hit_anything)
         {
-            if (rec.mat.t == metal && scatter_metal(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo))
+            ray_t scattered;
+            point3_t attenuation;
+            
+            if (rec.mat.t == 0 && scatter_metal(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo))
             {
                 res = vec3_mul(attenuation, res);
                 cur_ray = scattered;
             }
-            else if (rec.mat.t == lambertian && scatter_lambert(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo))
+            else if (rec.mat.t == 1 && scatter_lambert(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo))
             {
                 res = vec3_mul(attenuation, res);
                 cur_ray = scattered;
@@ -232,8 +233,8 @@ __device__ ray_t get_ray_sample(double offset_x, double offset_y, int i, int j, 
 __global__ void kernelrender(double* device_rand_nums, point3_t *device_buffer, int *device_num_samples, int *device_image_width, int *device_image_height, point3_t *device_loc00, point3_t *device_camera_center,
                              point3_t *device_pixel_delta_u, point3_t *device_pixel_delta_v, sphere_t *device_world)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int i = threadIdx.x;
+    int j = blockIdx.y;
 
     if (i >= *device_image_width || j >= *device_image_height)
     {
@@ -302,7 +303,7 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
 
     sphere_t *device_world;
     checkCudaError(cudaMalloc((void **)&device_world, 4 * sizeof(sphere_t)), "Failed to allocate device_world");
-    cudaMemcpy(device_world, world, sizeof(sphere_t), cudaMemcpyHostToDevice);
+    cudaMemcpy(device_world, world, 4 * sizeof(sphere_t), cudaMemcpyHostToDevice);
 
     // allocating random number vector for threads
     double *rand_nums = (double *) malloc((image_width * image_height * 4 + n_samples) * sizeof(double));
@@ -328,12 +329,12 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
 
     double *device_rand_nums;
     checkCudaError(cudaMalloc((void **)&device_rand_nums, (image_width * image_height * 4 + n_samples) * sizeof(double)), "Failed to allocate device_rand_nums");
-    cudaMemcpy(device_rand_nums, rand_nums, image_width * image_height * sizeof(double[2]), cudaMemcpyHostToDevice);
+    cudaMemcpy(device_rand_nums, rand_nums, image_width * image_height * sizeof(double), cudaMemcpyHostToDevice);
 
     dim3 grid(1, image_height, 1);
     dim3 block(image_width, 1, 1);
 
-    kernelrender<<<grid, block>>>(device_rand_nums, device_buffer, device_num_samples, device_image_width, device_image_height, device_loc00, device_camera_center, device_pixel_delta_u, device_pixel_delta_v, device_world);
+    kernelrender<<<grid,block>>>(device_rand_nums, device_buffer, device_num_samples, device_image_width, device_image_height, device_loc00, device_camera_center, device_pixel_delta_u, device_pixel_delta_v, device_world);
     cudaDeviceSynchronize();
 
     cudaMemcpy(host_buffer, device_buffer, image_width * image_height * sizeof(point3_t), cudaMemcpyDeviceToHost);
