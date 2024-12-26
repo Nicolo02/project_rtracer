@@ -331,7 +331,7 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
 
     double *device_rand_nums;
     checkCudaError(cudaMalloc((void **)&device_rand_nums, (image_width * image_height * 4 + n_samples) * sizeof(double)), "Failed to allocate device_rand_nums");
-    cudaMemcpy(device_rand_nums, rand_nums, image_width * image_height * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(device_rand_nums, rand_nums, (image_width * image_height * 4 + n_samples) * sizeof(double), cudaMemcpyHostToDevice);
 
     dim3 grid(1, image_height, 1);
     dim3 block(image_width, 1, 1);
