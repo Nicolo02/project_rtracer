@@ -40,6 +40,8 @@ target_sources(rtracer PRIVATE
     src/main.c
 )
 
+target_compile_options(rtracer PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-maxrregcount=32>)
+
 set_target_properties(rtracer PROPERTIES CUDA_ARCHITECTURES "75")
 
 set_target_properties(rtracer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
