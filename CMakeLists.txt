@@ -1,57 +1,69 @@
-cmake_minimum_required(VERSION 3.22)
-project(rtracer LANGUAGES C CUDA)
-find_package(CUDA  REQUIRED)
-include_directories("${CUDA_INCLUDE_DIRS}")
-# Supporto OpenMP
-find_package(OpenMP)
-if(OpenMP_C_FOUND)
-if(WIN32)
-    add_compile_options(/openmp)
-endif(WIN32)
-if(UNIX)
-	add_compile_options(-fopenmp)
-endif(UNIX)
+#---------------------------------------------------------------------------------------------------
+# CMake Build Configuration for the Ray Tracing Weekend Series
+#
+# See README.md for guidance.
+#---------------------------------------------------------------------------------------------------
+
+cmake_minimum_required ( VERSION 3.1.0...3.27.0 )
+
+project ( RTWeekend LANGUAGES CXX )
+
+# Set to C++11
+set ( CMAKE_CXX_STANDARD          11 )
+set ( CMAKE_CXX_STANDARD_REQUIRED ON )
+set ( CMAKE_CXX_EXTENSIONS        OFF )
+
+# Source
+
+set ( EXTERNAL
+  src/image.h
+)
+
+set ( SOURCE_ONE_WEEKEND
+  src/main.cc
+  src/camera.h
+  src/color.h
+  src/hittable.h
+  src/hittable_list.h
+  src/interval.h
+  src/material.h
+  src/ray.h
+  src/rtweekend.h
+  src/sphere.h
+  src/vec3.h
+)
+
+include_directories(src)
+
+# Specific compiler flags below. We're not going to add options for all possible compilers, but if
+# you're new to CMake (like we are), the following may be a helpful example if you're using a
+# different compiler or want to set different compiler options.
+
+message (STATUS "Compiler ID: " ${CMAKE_CXX_COMPILER_ID})
+message (STATUS "Release flags: " ${CMAKE_CXX_FLAGS_RELEASE})
+message (STATUS "Debug flags: " ${CMAKE_CXX_FLAGS_DEBUG})
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    # /wd #### - Disable warning
+    # /we #### - treat warning as error
+    add_compile_options("/W4")      # Enable level-4 warnings
+    add_compile_options("/we 4265") # Class has virtual functions, but its non-trivial destructor is not virtual
+    add_compile_options("/we 5204") # Class has virtual functions, but its trivial destructor is not virtual
+    add_compile_options("/wd 4100") # unreferenced formal parameter
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(-Wnon-virtual-dtor) # Class has virtual functions, but its destructor is not virtual
+    add_compile_options(-Wreorder) # Data member will be initialized after [other] data member
+    add_compile_options(-Wmaybe-uninitialized) # Variable improperly initialized
+    add_compile_options(-Wunused-variable) # Variable is defined but unused
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-Wnon-virtual-dtor) # Class has virtual functions, but its destructor is not virtual
+    add_compile_options(-Wreorder) # Data member will be initialized after [other] data member
+    add_compile_options(-Wsometimes-uninitialized) # Variable improperly initialized
+    add_compile_options(-Wunused-variable) # Variable is defined but unused
 endif()
 
-# Opzioni di compilazione
-if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(-Wall -Wextra -Wpedantic -Werror)
-elseif (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
-    add_compile_options(/W4 /WX) # Equivalente per MSVC
-endif()
+# Executables
+add_executable(inOneWeekend      ${EXTERNAL} ${SOURCE_ONE_WEEKEND})
 
-# Aggiungi i file di intestazione al progetto
-set(HEADERS
-    src/ray.h
-    src/point3.h
-    src/utils.h
-    src/sphere.h
-    src/globals.h
-    src/interval.h
-)
-
-# Aggiungi i file sorgente al progetto
-set(SOURCES
-    src/main.c
-    src/utils.c
-    src/point3.c
-    src/ray.c
-    src/sphere.c
-    src/interval.c
-)
-
-# Definisci l'eseguibile da costruire
-add_executable(rtracer ${SOURCES} ${HEADERS})
-target_sources(rtracer PRIVATE
-    src/ray.h src/ray.c
-    src/sphere.h src/sphere.c
-    src/point3.h src/point3.c
-    src/utils.h src/utils.c
-    src/interval.h src/interval.c
-    src/main.c
-)
-
-# Link delle librerie matematiche (solo per GCC/Clang)
-if(UNIX)
-target_link_libraries(rtracer m)
-endif(UNIX)
+find_package(OpenMP REQUIRED)
+target_link_libraries( inOneWeekend PRIVATE OpenMP::OpenMP_CXX)

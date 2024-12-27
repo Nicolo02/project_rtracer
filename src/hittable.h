@@ -1,5 +1,5 @@
-#ifndef RAY_H
-#define RAY_H
+#ifndef HITTABLE_H
+#define HITTABLE_H
 //==============================================================================================
 // Originally written in 2016 by Peter Shirley <ptrshrl@gmail.com>
 //
@@ -11,25 +11,32 @@
 // along with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //==============================================================================================
 
-#include "vec3.h"
+class material;
 
 
-class ray {
+class hit_record {
   public:
-    ray() {}
+    point3 p;
+    vec3 normal;
+    shared_ptr<material> mat;
+    double t;
+    bool front_face;
 
-    ray(const point3& origin, const vec3& direction) : orig(origin), dir(direction) {}
+    void set_face_normal(const ray& r, const vec3& outward_normal) {
+        // Sets the hit record normal vector.
+        // NOTE: the parameter `outward_normal` is assumed to have unit length.
 
-    const point3& origin() const  { return orig; }
-    const vec3& direction() const { return dir; }
-
-    point3 at(double t) const {
-        return orig + t*dir;
+        front_face = dot(r.direction(), outward_normal) < 0;
+        normal = front_face ? outward_normal : -outward_normal;
     }
+};
 
-  private:
-    point3 orig;
-    vec3 dir;
+
+class hittable {
+  public:
+    virtual ~hittable() = default;
+
+    virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const = 0;
 };
 
 
