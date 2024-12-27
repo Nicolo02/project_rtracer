@@ -1,5 +1,4 @@
-![out](https://github.com/user-attachments/assets/8bf7ab3c-c043-4022-9a48-e0e025e3d684)
-*The rendered image.*
+<img src="https://github.com/user-attachments/assets/8bf7ab3c-c043-4022-9a48-e0e025e3d684" alt="The rendered image." width="300" height="200">
 This repository contains various implementations of the [Ray Tracing in One Weekend](https://github.com/RayTracing/raytracing.github.io) ray tracing engine by Peter Shirley.\
 This project aims to compare the performances of a scalar version of the engine and several parallel ones.
 - The scalar version is an entirely reworked version of the original project in the C language;
