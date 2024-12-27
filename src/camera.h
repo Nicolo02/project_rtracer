@@ -11,7 +11,6 @@
 // along with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //==============================================================================================
 
-#include <immintrin.h>
 #include "hittable.h"
 #include "material.h"
 #include "vec3.h"
@@ -19,16 +18,15 @@
 #include <mutex>
 #include <iostream>
 #include <chrono>
-#include <vector>
-#include <random>
 
+using namespace std::chrono;
 
 class camera
 {
 public:
     double aspect_ratio = 1.0;  // Ratio of image width over height
     int image_width = 100;      // Rendered image width in pixel count
-    int samples_per_pixel = 16; // Count of random samples for each pixel
+    int samples_per_pixel = 10; // Count of random samples for each pixel
     int max_depth = 10;         // Maximum number of ray bounces into scene
 
     double vfov = 90;                  // Vertical view angle (field of view)
@@ -41,13 +39,15 @@ public:
 
     void render(const hittable &world)
     {
+        auto beg = high_resolution_clock::now();
+
         initialize();
 
         auto img = image{image_width, image_height};
         auto lines_done = 0;
         std::mutex img_mutex;
 
-        auto start = std::chrono::high_resolution_clock::now();
+        auto begOMP = high_resolution_clock::now();
         #pragma omp parallel for collapse(2)
         for (int j = 0; j < image_height; j++)
         {
@@ -56,49 +56,18 @@ public:
                 double x = 0;
                 double y = 0;
                 double z = 0;
-
-                __m256 simd_x = _mm256_setzero_ps();
-                __m256 simd_y = _mm256_setzero_ps();
-                __m256 simd_z = _mm256_setzero_ps();
-                
-                std::vector<float> random_numbers_x, random_numbers_y, random_numbers_z;
-
-                for (int sample = 0; sample < samples_per_pixel; sample += 8) {
-
-                    for (int ray_indx = 0; ray_indx < 8; ray_indx++){
-                        ray r = get_ray(i, j);
-                        auto r_color = ray_color(r, max_depth, world);
-
-                        random_numbers_x.push_back((float) r_color.x());
-                        random_numbers_y.push_back((float) r_color.y());
-                        random_numbers_z.push_back((float) r_color.z());
-                    }
-
-                    __m256 ray_colors_x = _mm256_loadu_ps(&random_numbers_x[sample % 16]);
-                    __m256 ray_colors_y = _mm256_loadu_ps(&random_numbers_y[sample % 16]);
-                    __m256 ray_colors_z = _mm256_loadu_ps(&random_numbers_z[sample % 16]);
-
-                    simd_x = _mm256_add_ps(simd_x, ray_colors_x);
-                    simd_y = _mm256_add_ps(simd_y, ray_colors_y);
-                    simd_z = _mm256_add_ps(simd_z, ray_colors_z);
-                }
-
-                float result_x[8], result_y[8], result_z[8];
-                _mm256_storeu_ps(result_x, simd_x);
-                _mm256_storeu_ps(result_y, simd_y);
-                _mm256_storeu_ps(result_z, simd_z);
-
-                for (int k = 0; k < 8; ++k) {
-                    x += result_x[k];
-                    y += result_y[k];
-                    z += result_z[k];
+                for (int sample = 0; sample < samples_per_pixel; sample++)
+                {
+                    ray r = get_ray(i, j);
+                    auto r_color = ray_color(r, max_depth, world);
+                    x += r_color.x();
+                    y += r_color.y();
+                    z += r_color.z();
                 }
 
                 auto pixel_color = color{x, y, z};
                 {
                     std::lock_guard<std::mutex> img_lock(img_mutex);
-                    auto p = pixel_color * pixel_samples_scale;
-                    //std::clog << "\nRES: " << p[0] << ", " << p[1] << ", " << p[2];
                     img.set_pixel(i, j, pixel_color * pixel_samples_scale);
                     if (i == image_width - 1)
                     {
@@ -108,14 +77,13 @@ public:
                 }
             }
         }
-        auto end = std::chrono::high_resolution_clock::now();
-        auto countTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-
+        auto endOMP = high_resolution_clock::now();
+        auto duration = duration_cast<milliseconds>(endOMP - begOMP);
+        std::clog << "\nElapsed Time OMP: " << duration.count() << "\n";
         std::cout << img;
-        end = std::chrono::high_resolution_clock::now();
-
-        std::clog << "\nParallel Time: " << (countTime);
-        std::clog << "\nTotal Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        auto end = high_resolution_clock::now(); 
+        duration = duration_cast<milliseconds>(end - beg);
+        std::clog << "Elapsed Time Tot: " << duration.count() << "\n";
     }
 
 private:
