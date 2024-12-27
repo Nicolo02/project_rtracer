@@ -18,7 +18,7 @@ In the [OpenMP version](https://github.com/Nicolo02/project_rtracer/tree/OpenMP)
 In the [SIMD version](https://github.com/Nicolo02/project_rtracer/tree/SIMD), each pixel colour -originally a `double`- is turned into a `float` variable in order to perform the rendering computations on 8 pixels at a time in 256-bit registers.\
 An `image.h` header file was included in both versions to provide a buffer to hold the computed colour values in the right order. The buffer's content is later written onto the output file.
 ## CUDA
-In this version (in [this branch](https://github.com/Nicolo02/project_rtracer/tree/cuda)) a CUDA thread is launched for each pixel in the image. The thread takes care of calculating the pixel's color for each sample and averaging the result.\
+In [this version](https://github.com/Nicolo02/project_rtracer/tree/cuda), a CUDA thread is launched for each pixel in the image. The thread takes care of calculating the pixel's color for each sample and averaging the result.\
 A significant refactoring of the C code was required. Most notably, all of the rendering functions have to run on the GPU only and thus have been turned into `__device__` code. To make this code visible to the kernel that is responsible for the rendering, it has been moved into the same CUDA file as the kernel itself.
 # Compilation and execution
 All of the implementations are compiled with Cmake.
