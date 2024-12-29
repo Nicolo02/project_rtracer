@@ -233,10 +233,18 @@ __device__ ray_t get_ray_sample(double offset_x, double offset_y, int i, int j, 
 __global__ void kernelrender(double* device_rand_nums, point3_t *device_buffer, int *device_num_samples, int *device_image_width, int *device_image_height, point3_t *device_loc00, point3_t *device_camera_center,
                              point3_t *device_pixel_delta_u, point3_t *device_pixel_delta_v, sphere_t *device_world)
 {
-    int i = threadIdx.x;
-    int j = blockIdx.y;
+    //Variabili locali per memorizzarli nei registri e aumentare speedup
+    int image_width = *device_image_width;
+    int image_height = *device_image_height;
+    point3_t loc00 = *device_loc00;
+    point3_t camera_center = *device_camera_center;
+    point3_t pixel_delta_u = *device_pixel_delta_u;
+    point3_t pixel_delta_v = *device_pixel_delta_v;
 
-    if (i >= *device_image_width || j >= *device_image_height)
+    int i = threadIdx.x + blockDim.x * blockIdx.x;
+    int j = threadIdx.y + blockIdx.y * blockDim.y;
+
+    if (i >= image_width || j >= image_height)
     {
         return;
     }
@@ -249,11 +257,11 @@ __global__ void kernelrender(double* device_rand_nums, point3_t *device_buffer, 
 
     for (int k = 0; k < *device_num_samples; k++)
     {
-        ray_t r = get_ray_sample(device_rand_nums[(j*blockDim.x + i)*4 + k], device_rand_nums[(j*blockDim.x + i)*4 + 1 + k], i, j, *device_loc00, *device_camera_center, *device_pixel_delta_u, *device_pixel_delta_v);
+        ray_t r = get_ray_sample(device_rand_nums[(j*blockDim.x + i)*4 + k], device_rand_nums[(j*blockDim.x + i)*4 + 1 + k], i, j, loc00, camera_center, pixel_delta_u, pixel_delta_v);
         pixel_color = vec3_sum_CUDA(ray_color(r, device_world, rand_unit), pixel_color);
     }
 
-    device_buffer[j * *device_image_width + i] = vec3_div_sc_CUDA(pixel_color, *device_num_samples);
+    device_buffer[j * image_width + i] = vec3_div_sc_CUDA(pixel_color, *device_num_samples);
 }
 
 // FINE KERNEL
