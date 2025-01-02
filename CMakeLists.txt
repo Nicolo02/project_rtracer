@@ -55,6 +55,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options(-Wreorder) # Data member will be initialized after [other] data member
     add_compile_options(-Wmaybe-uninitialized) # Variable improperly initialized
     add_compile_options(-Wunused-variable) # Variable is defined but unused
+    add_compile_options(-mavx2) # Variable is defined but unused
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wnon-virtual-dtor) # Class has virtual functions, but its destructor is not virtual
     add_compile_options(-Wreorder) # Data member will be initialized after [other] data member
@@ -63,7 +64,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 # Executables
-add_executable(inOneWeekend      ${EXTERNAL} ${SOURCE_ONE_WEEKEND})
+add_executable(rtracer      ${EXTERNAL} ${SOURCE_ONE_WEEKEND})
 
 find_package(OpenMP REQUIRED)
-target_link_libraries( inOneWeekend PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries( rtracer PRIVATE OpenMP::OpenMP_CXX)

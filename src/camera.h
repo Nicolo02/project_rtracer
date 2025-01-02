@@ -22,14 +22,13 @@
 #include <vector>
 #include <random>
 
-
 class camera
 {
 public:
-    double aspect_ratio = 1.0;  // Ratio of image width over height
-    int image_width = 100;      // Rendered image width in pixel count
-    int samples_per_pixel = 16; // Count of random samples for each pixel
-    int max_depth = 10;         // Maximum number of ray bounces into scene
+    double aspect_ratio = 1.0; // Ratio of image width over height
+    int image_width = 100;     // Rendered image width in pixel count
+    int samples_per_pixel = 10; // Count of random samples for each pixel
+    int max_depth = 10;        // Maximum number of ray bounces into scene
 
     double vfov = 90;                  // Vertical view angle (field of view)
     point3 lookfrom = point3(0, 0, 0); // Point camera is looking from
@@ -38,6 +37,17 @@ public:
 
     double defocus_angle = 0; // Variation angle of rays through each pixel
     double focus_dist = 10;   // Distance from camera lookfrom point to plane of perfect focus
+
+    // Funzione helper per somma orizzontale
+    inline float _mm256_reduce_add_ps(__m256 v)
+    {
+        __m128 low = _mm256_castps256_ps128(v);    // Estrai i primi 128 bit (4 float)
+        __m128 high = _mm256_extractf128_ps(v, 1); // Estrai i secondi 128 bit (4 float)
+        __m128 sum = _mm_add_ps(low, high);        // Somma i due vettori da 4 elementi
+        sum = _mm_hadd_ps(sum, sum);               // Somma orizzontale: 4 -> 2
+        sum = _mm_hadd_ps(sum, sum);               // Somma orizzontale: 2 -> 1
+        return _mm_cvtss_f32(sum);                 // Estrai il risultato come float
+    }
 
     void render(const hittable &world)
     {
@@ -48,7 +58,7 @@ public:
         std::mutex img_mutex;
 
         auto start = std::chrono::high_resolution_clock::now();
-        #pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(2)
         for (int j = 0; j < image_height; j++)
         {
             for (int i = 0; i < image_width; i++)
@@ -60,45 +70,40 @@ public:
                 __m256 simd_x = _mm256_setzero_ps();
                 __m256 simd_y = _mm256_setzero_ps();
                 __m256 simd_z = _mm256_setzero_ps();
-                
+
                 std::vector<float> random_numbers_x, random_numbers_y, random_numbers_z;
 
-                for (int sample = 0; sample < samples_per_pixel; sample += 8) {
+                for (int sample = 0; sample < samples_per_pixel; sample += 8)
+                {
 
-                    for (int ray_indx = 0; ray_indx < 8; ray_indx++){
+                    for (int ray_indx = 0; ray_indx < 8; ray_indx++)
+                    {
                         ray r = get_ray(i, j);
                         auto r_color = ray_color(r, max_depth, world);
 
-                        random_numbers_x.push_back((float) r_color.x());
-                        random_numbers_y.push_back((float) r_color.y());
-                        random_numbers_z.push_back((float) r_color.z());
+                        random_numbers_x.push_back((float)r_color.x());
+                        random_numbers_y.push_back((float)r_color.y());
+                        random_numbers_z.push_back((float)r_color.z());
                     }
 
-                    __m256 ray_colors_x = _mm256_loadu_ps(&random_numbers_x[sample % 16]);
-                    __m256 ray_colors_y = _mm256_loadu_ps(&random_numbers_y[sample % 16]);
-                    __m256 ray_colors_z = _mm256_loadu_ps(&random_numbers_z[sample % 16]);
+                    __m256 ray_colors_x = _mm256_loadu_ps(&random_numbers_x[sample % samples_per_pixel]);
+                    __m256 ray_colors_y = _mm256_loadu_ps(&random_numbers_y[sample % samples_per_pixel]);
+                    __m256 ray_colors_z = _mm256_loadu_ps(&random_numbers_z[sample % samples_per_pixel]);
 
                     simd_x = _mm256_add_ps(simd_x, ray_colors_x);
                     simd_y = _mm256_add_ps(simd_y, ray_colors_y);
                     simd_z = _mm256_add_ps(simd_z, ray_colors_z);
                 }
 
-                float result_x[8], result_y[8], result_z[8];
-                _mm256_storeu_ps(result_x, simd_x);
-                _mm256_storeu_ps(result_y, simd_y);
-                _mm256_storeu_ps(result_z, simd_z);
-
-                for (int k = 0; k < 8; ++k) {
-                    x += result_x[k];
-                    y += result_y[k];
-                    z += result_z[k];
-                }
+                x = _mm256_reduce_add_ps(simd_x);
+                y = _mm256_reduce_add_ps(simd_y);
+                z = _mm256_reduce_add_ps(simd_z);
 
                 auto pixel_color = color{x, y, z};
                 {
                     std::lock_guard<std::mutex> img_lock(img_mutex);
                     auto p = pixel_color * pixel_samples_scale;
-                    //std::clog << "\nRES: " << p[0] << ", " << p[1] << ", " << p[2];
+                    // std::clog << "\nRES: " << p[0] << ", " << p[1] << ", " << p[2];
                     img.set_pixel(i, j, pixel_color * pixel_samples_scale);
                     if (i == image_width - 1)
                     {
