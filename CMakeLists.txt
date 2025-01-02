@@ -63,7 +63,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 # Executables
-add_executable(inOneWeekend      ${EXTERNAL} ${SOURCE_ONE_WEEKEND})
+add_executable(rtracer      ${EXTERNAL} ${SOURCE_ONE_WEEKEND})
 
 find_package(OpenMP REQUIRED)
-target_link_libraries( inOneWeekend PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries( rtracer PRIVATE OpenMP::OpenMP_CXX)

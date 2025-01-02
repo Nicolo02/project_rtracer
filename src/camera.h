@@ -79,11 +79,11 @@ public:
         }
         auto endOMP = high_resolution_clock::now();
         auto duration = duration_cast<milliseconds>(endOMP - begOMP);
-        std::clog << "\nElapsed Time OMP: " << duration.count() << "\n";
+        std::clog << "\nElapsed Time OMP (milliseconds): " << duration.count() << "\n";
         std::cout << img;
         auto end = high_resolution_clock::now(); 
         duration = duration_cast<milliseconds>(end - beg);
-        std::clog << "Elapsed Time Tot: " << duration.count() << "\n";
+        std::clog << "Elapsed Time Tot (milliseconds): " << duration.count() << "\n";
     }
 
 private:
