@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <time.h>
+#include <unistd.h>
+
 #include "utils.h"
 #include "point3.h"
 #include "sphere.h"
@@ -26,6 +29,9 @@ void write_color(FILE *out, point3_t pixel_color)
 
 int main(void)
 {
+
+  __clock_t cstart, cend;
+  cstart = clock();
 
   // Image
   double aspect_ratio = 16.0 / 9.0;
@@ -148,6 +154,10 @@ int main(void)
 
   /* chiude il file */
   fclose(out_fd);
-
+  cend = clock()-cstart;
+  double cputime= (double) cend/CLOCKS_PER_SEC;
+  long cores = sysconf(_SC_NPROCESSORS_ONLN);
+  printf("Cores: %ld\n", cores);
+  printf("Time elapsed: %f\n", cputime);
   printf("\nDone.\n");
 }
