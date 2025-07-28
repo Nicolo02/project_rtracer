@@ -1,8 +1,17 @@
 #include "render.h"
+#include "cuda_runtime.h"
+#include <curand_kernel.h>
+#include <stdint.h>
+#include <stdio.h>
 
 // ATTENZIONE: Da  qui funzioni solo __device__ trasposte qui
 // AGGIUNTO in render.h la inclusione del file utils.h, se da errore, togli
-double random_double() { return rand() / (RAND_MAX + 1.0); }
+
+__device__ float getRandom(uint64_t seed, int tid, int threadCallCount) {
+    curandState s;
+    curand_init(seed + tid + threadCallCount, 0, 0, &s);
+    return curand_uniform(&s);
+}
 
 __device__ point3_t vec3_mul_sc_CUDA(point3_t one, double two) { // Moltip. per uno scalare
   point3_t result = {one.x * two, one.y * two, one.z * two};
@@ -23,15 +32,15 @@ __device__ point3_t vec3_sub_CUDA(point3_t one, point3_t two) { // Differenza tr
   return result;
 }
 
-__device__ double vec3_len_sq(point3_t one)
+__device__ double vec3_len_sq_cuda(point3_t one)
 {
     double result = one.x * one.x + one.y * one.y + one.z * one.z;
     return result;
 }
 
-__device__ double vec3_len(point3_t one) { return sqrt(vec3_len_sq(one)); }
+__device__ double vec3_len(point3_t one) { return sqrt(vec3_len_sq_cuda(one)); }
 
-__device__ double vec3_dot(point3_t u, point3_t v)
+__device__ double vec3_dot_cuda(point3_t u, point3_t v)
 {
     double result = u.x * v.x + u.y * v.y + u.z * v.z;
     return result;
@@ -60,7 +69,7 @@ __device__ point3_t ray_at(ray_t r, double dist)
 
 __device__ void set_face_normal(ray_t r, point3_t outward_normal, hit_record *rec)
 {
-    rec->front_face = vec3_dot(r.dir, outward_normal) < 0;
+    rec->front_face = vec3_dot_cuda(r.dir, outward_normal) < 0;
     if (rec->front_face)
     {
         rec->normal = outward_normal;
@@ -74,9 +83,9 @@ __device__ void set_face_normal(ray_t r, point3_t outward_normal, hit_record *re
 __device__ bool hit(ray_t r, double ray_tmin, double ray_tmax, hit_record *rec, sphere_t s)
 {
     point3_t oc = vec3_sub_CUDA(s.center, r.orig);
-    double a = vec3_dot(r.dir, r.dir);
-    double h = vec3_dot(r.dir, oc);
-    double c = vec3_dot(oc, oc) - s.radius * s.radius;
+    double a = vec3_dot_cuda(r.dir, r.dir);
+    double h = vec3_dot_cuda(r.dir, oc);
+    double c = vec3_dot_cuda(oc, oc) - s.radius * s.radius;
 
     double discriminant = h * h - a * c;
     if (discriminant < 0)
@@ -104,7 +113,7 @@ __device__ bool hit(ray_t r, double ray_tmin, double ray_tmax, hit_record *rec, 
 
 __device__ point3_t vec3_reflect(point3_t vec, point3_t norm)
 {
-    double dot_product = 2 * vec3_dot(vec, norm);
+    double dot_product = 2 * vec3_dot_cuda(vec, norm);
     point3_t scaled_n = vec3_mul_sc_CUDA(norm, dot_product);
     point3_t result = vec3_sub_CUDA(vec, scaled_n);
     return result;
@@ -230,7 +239,15 @@ __device__ ray_t get_ray_sample(double offset_x, double offset_y, int i, int j, 
 // FINE NUOVE FUNZIONI __device__
 // INIZIO KERNEL
 
-__global__ void kernelrender(double* device_rand_nums, point3_t *device_buffer, int *device_num_samples, int *device_image_width, int *device_image_height, point3_t *device_loc00, point3_t *device_camera_center,
+__global__ void setup_kernel(curandState* state, uint64_t seed, int total_states)
+{
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    if (tid >= total_states) return;
+
+    curand_init(seed, tid, 0, &state[tid]);
+}
+
+__global__ void kernelrender(uint64_t seed, curandState* rand, point3_t *device_buffer, int *device_num_samples, int *device_image_width, int *device_image_height, point3_t *device_loc00, point3_t *device_camera_center,
                              point3_t *device_pixel_delta_u, point3_t *device_pixel_delta_v, sphere_t *device_world)
 {
     //Variabili locali per memorizzarli nei registri e aumentare speedup
@@ -240,9 +257,12 @@ __global__ void kernelrender(double* device_rand_nums, point3_t *device_buffer, 
     point3_t camera_center = *device_camera_center;
     point3_t pixel_delta_u = *device_pixel_delta_u;
     point3_t pixel_delta_v = *device_pixel_delta_v;
+    int n_samples = *device_num_samples;
 
-    int i = threadIdx.x + blockDim.x * blockIdx.x;
-    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    int i = threadIdx.x;
+    int j = blockIdx.y;
+    int tid = i + j*blockDim.x;
+    int index = tid * (n_samples + 2);
 
     if (i >= image_width || j >= image_height)
     {
@@ -253,15 +273,15 @@ __global__ void kernelrender(double* device_rand_nums, point3_t *device_buffer, 
     pixel_color.x = 0;
     pixel_color.y = 0;
     pixel_color.z = 0;
-    point3_t rand_unit = {2*device_rand_nums[(j*blockDim.x + i)*4 + 2], 2*device_rand_nums[(j*blockDim.x + i)*4 + 3], 0};
+    point3_t rand_unit = {2*curand_uniform(&rand[index]), 2*curand_uniform(&rand[index+1]), 0};
 
-    for (int k = 0; k < *device_num_samples; k++)
+    for (int k = 2; k < n_samples+2; k++)
     {
-        ray_t r = get_ray_sample(device_rand_nums[(j*blockDim.x + i)*4 + k], device_rand_nums[(j*blockDim.x + i)*4 + 1 + k], i, j, loc00, camera_center, pixel_delta_u, pixel_delta_v);
+        ray_t r = get_ray_sample(curand_uniform(&rand[index+k]), curand_uniform(&rand[index+k]), i, j, loc00, camera_center, pixel_delta_u, pixel_delta_v);
         pixel_color = vec3_sum_CUDA(ray_color(r, device_world, rand_unit), pixel_color);
     }
 
-    device_buffer[j * image_width + i] = vec3_div_sc_CUDA(pixel_color, *device_num_samples);
+    device_buffer[j * image_width + i] = vec3_div_sc_CUDA(pixel_color, n_samples);
 }
 
 // FINE KERNEL
@@ -313,38 +333,19 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
     checkCudaError(cudaMalloc((void **)&device_world, 4 * sizeof(sphere_t)), "Failed to allocate device_world");
     cudaMemcpy(device_world, world, 4 * sizeof(sphere_t), cudaMemcpyHostToDevice);
 
-    // allocating random number vector for threads
-    double *rand_nums = (double *) malloc((image_width * image_height * 4 + n_samples) * sizeof(double));
-    int j, i;
-    for (j = 0; j < image_height; j++) {
-        for (i = 0; i < image_width; i++) {
-            int index = (j * image_width + i) * 4;  // Calcola l'indice lineare
-
-            // Assegna i valori all'array
-            rand_nums[index] = random_double() - 0.5;
-            rand_nums[index + 1] = random_double() - 0.5;
-
-            do {
-                rand_nums[index + 2] = 2 * (random_double() - 0.5);
-                rand_nums[index + 3] = 2 * (random_double() - 0.5);
-            } while (rand_nums[index + 2] * rand_nums[index + 2] + rand_nums[index + 3] * rand_nums[index + 3] >= 1.0);
-            rand_nums[index + 2] = rand_nums[index + 2]/2;
-            rand_nums[index + 3] = rand_nums[index + 3]/2;
-        }
-    }
-    j--;i--;
-    for (int k = 0; k < n_samples; k++){
-        rand_nums[(j * image_width + i) * 4 + k] = random_double() - 0.5;
-    }
-
-    double *device_rand_nums;
-    checkCudaError(cudaMalloc((void **)&device_rand_nums, (image_width * image_height * 4 + n_samples) * sizeof(double)), "Failed to allocate device_rand_nums");
-    cudaMemcpy(device_rand_nums, rand_nums, (image_width * image_height * 4 + n_samples) * sizeof(double), cudaMemcpyHostToDevice);
-
     dim3 grid(1, image_height, 1);
     dim3 block(image_width, 1, 1);
 
-    kernelrender<<<grid,block>>>(device_rand_nums, device_buffer, device_num_samples, device_image_width, device_image_height, device_loc00, device_camera_center, device_pixel_delta_u, device_pixel_delta_v, device_world);
+    int total_curand_states = image_width * image_height * (n_samples + 2);
+    curandState* dev_curand_states;
+    checkCudaError(cudaMalloc(&dev_curand_states, total_curand_states * sizeof(curandState)), "Failed to allocate dev_curand_states");
+
+    int threads_per_block = 256;
+    int blocks = (total_curand_states + threads_per_block - 1) / threads_per_block;
+    setup_kernel<<<blocks,threads_per_block>>>(dev_curand_states, time(NULL), num_samples);
+    cudaDeviceSynchronize();
+
+    kernelrender<<<grid,block>>>(time(NULL), dev_curand_states,device_buffer, device_num_samples, device_image_width, device_image_height, device_loc00, device_camera_center, device_pixel_delta_u, device_pixel_delta_v, device_world);
     cudaDeviceSynchronize();
 
     cudaMemcpy(host_buffer, device_buffer, image_width * image_height * sizeof(point3_t), cudaMemcpyDeviceToHost);
@@ -358,7 +359,7 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
     cudaFree(device_pixel_delta_u);
     cudaFree(device_pixel_delta_v);
     cudaFree(device_world);
-    free(rand_nums);
+    cudaFree(dev_curand_states);
 
     return;
 }
