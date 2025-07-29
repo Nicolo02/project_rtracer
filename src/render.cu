@@ -7,12 +7,6 @@
 // ATTENZIONE: Da  qui funzioni solo __device__ trasposte qui
 // AGGIUNTO in render.h la inclusione del file utils.h, se da errore, togli
 
-__device__ float getRandom(uint64_t seed, int tid, int threadCallCount) {
-    curandState s;
-    curand_init(seed + tid + threadCallCount, 0, 0, &s);
-    return curand_uniform(&s);
-}
-
 __device__ point3_t vec3_mul_sc_CUDA(point3_t one, double two) { // Moltip. per uno scalare
   point3_t result = {one.x * two, one.y * two, one.z * two};
   return result;
