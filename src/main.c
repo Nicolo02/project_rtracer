@@ -139,12 +139,13 @@ int main(void)
     exit(EXIT_FAILURE);
   }
 
+  //float* host_debug_random = (float*)malloc(sizeof(float) * image_width * image_height * (num_samples+2));
+
   //render logic
   render(host_pixel_buffer, num_samples, image_width, image_height, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v, world);
   for (int j = image_height - 1; j >= 0; --j) {
     for (int i = 0; i < image_width; ++i) {
       point3_t pixel = host_pixel_buffer[j * image_width + i];
-      //printf("\nFIN: %f, %f, %f\n", pixel.x, pixel.y, pixel.z);
     }
   }
 
@@ -152,6 +153,16 @@ int main(void)
 
   /* chiude il file */
   fclose(out_fd);
-
+/*
+  FILE* f = fopen("random_dump.txt", "w");
+  for (int t = 0; t < image_width * image_height; ++t) {
+      fprintf(f, "Pixel %d: ", t);
+      for (int k = 0; k < num_samples+2; ++k) {
+          fprintf(f, "%f ", host_debug_random[t * (num_samples + 2) + k]);
+      }
+      fprintf(f, "\n");
+  }
+  fclose(f);
+*/
   printf("\nDone.\n");
 }
