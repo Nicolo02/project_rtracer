@@ -118,6 +118,7 @@ __device__ bool scatter_metal(hit_record rec, point3_t rand_unit, point3_t *atte
     point3_t reflected = vec3_reflect(rec.normal, rand_unit);
     scattered->orig = rec.p;
     scattered->dir = reflected;
+    scattered->tm = 0.0;
     attenuation->x = albedo.x;
     attenuation->y = albedo.y;
     attenuation->z = albedo.z;
@@ -142,6 +143,7 @@ __device__ bool scatter_lambert(hit_record rec, point3_t rand_unit, point3_t *at
 
     scattered->orig = rec.p;
     scattered->dir = scatter_dir;
+    scattered->tm = 0.0;
     attenuation->x = albedo.x;
     attenuation->y = albedo.y;
     attenuation->z = albedo.z;
@@ -222,12 +224,13 @@ __device__ point3_t ray_color(ray_t ray, sphere_t *world, point3_t rand_unit)
     return res;
 }
 
-__device__ ray_t get_ray_sample(double offset_x, double offset_y, int i, int j, point3_t loc_00, point3_t camera_center, point3_t pixel_delta_u, point3_t pixel_delta_v)
+__device__ ray_t get_ray_sample(double offset_x, double offset_y, int i, int j, point3_t loc_00, point3_t camera_center,
+                                point3_t pixel_delta_u, point3_t pixel_delta_v, curandState* rand)
 {
     point3_t pixel_sample = vec3_sum_CUDA(loc_00, vec3_sum_CUDA(vec3_mul_sc_CUDA(pixel_delta_u, i + offset_x), vec3_mul_sc_CUDA(pixel_delta_v, j + offset_y)));
     point3_t ray_direction = vec3_sub_CUDA(pixel_sample, camera_center);
-    ray_t result = {camera_center, ray_direction};
-    return result;
+    double tm = curand_uniform_double(rand);
+    return {camera_center, ray_direction, tm};
 }
 
 // FINE NUOVE FUNZIONI __device__
@@ -279,7 +282,7 @@ __global__ void kernelrender(curandState* rand, point3_t *device_buffer, int *de
     {
         //temp1 = curand_uniform(&rand[tid]);
         //debug[index+k] = temp1;
-        ray_t r = get_ray_sample(curand_uniform(&state), curand_uniform(&state), i, j, loc00, camera_center, pixel_delta_u, pixel_delta_v);
+        ray_t r = get_ray_sample(curand_uniform(&state), curand_uniform(&state), i, j, loc00, camera_center, pixel_delta_u, pixel_delta_v, &state);
         pixel_color = vec3_sum_CUDA(ray_color(r, device_world, rand_unit), pixel_color);
     }
 

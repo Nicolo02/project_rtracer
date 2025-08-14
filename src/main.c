@@ -32,7 +32,6 @@ void write_color(FILE *out, point3_t* pixel_color, int image_width, int image_he
 
 int main(void)
 {
-
   // Image
   double aspect_ratio = 16.0 / 9.0;
   int image_width = 1024;

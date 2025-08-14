@@ -77,6 +77,7 @@ typedef struct {
 typedef struct {
   point3_t orig;
   point3_t dir;
+  double tm;
 } ray_t;
 
 typedef struct {
