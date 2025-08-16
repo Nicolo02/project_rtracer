@@ -81,9 +81,11 @@ typedef struct {
 } ray_t;
 
 typedef struct {
-  point3_t center;
+  point3_t center_start;
+  point3_t center_end;
   double radius;
   material mat;
+  bool moving;
 } sphere_t;
 
 typedef struct {

@@ -76,7 +76,14 @@ __device__ void set_face_normal(ray_t r, point3_t outward_normal, hit_record *re
 
 __device__ bool hit(ray_t r, double ray_tmin, double ray_tmax, hit_record *rec, sphere_t s)
 {
-    point3_t oc = vec3_sub_CUDA(s.center, r.orig);
+    point3_t current_center;
+    if (!s.moving){
+        current_center = s.center_start;
+    } else {
+        point3_t dist = vec3_mul_sc_CUDA(vec3_sub_CUDA(s.center_start,s.center_end),r.tm);
+        current_center = vec3_sub_CUDA(s.center_start,dist);
+    }
+    point3_t oc = vec3_sub_CUDA(current_center, r.orig);
     double a = vec3_dot_cuda(r.dir, r.dir);
     double h = vec3_dot_cuda(r.dir, oc);
     double c = vec3_dot_cuda(oc, oc) - s.radius * s.radius;
@@ -98,7 +105,7 @@ __device__ bool hit(ray_t r, double ray_tmin, double ray_tmax, hit_record *rec, 
 
     rec->t = root;
     rec->p = ray_at(r, rec->t);
-    point3_t outward_normal = vec3_div_sc_CUDA((vec3_sub_CUDA(rec->p, s.center)), s.radius);
+    point3_t outward_normal = vec3_div_sc_CUDA((vec3_sub_CUDA(rec->p, current_center)), s.radius);
     set_face_normal(r, outward_normal, rec);
     rec->mat = s.mat;
 
@@ -113,12 +120,12 @@ __device__ point3_t vec3_reflect(point3_t vec, point3_t norm)
     return result;
 }
 
-__device__ bool scatter_metal(hit_record rec, point3_t rand_unit, point3_t *attenuation, ray_t *scattered, point3_t albedo)
+__device__ bool scatter_metal(hit_record rec, point3_t rand_unit, point3_t *attenuation, ray_t *scattered, point3_t albedo, double time)
 {
     point3_t reflected = vec3_reflect(rec.normal, rand_unit);
     scattered->orig = rec.p;
     scattered->dir = reflected;
-    scattered->tm = 0.0;
+    scattered->tm = time;
     attenuation->x = albedo.x;
     attenuation->y = albedo.y;
     attenuation->z = albedo.z;
@@ -132,7 +139,7 @@ __device__ bool vec3_near_zero(point3_t v)
     return (fabs(v.x) < s) && (fabs(v.y) < s) && (fabs(v.z) < s);
 }
 
-__device__ bool scatter_lambert(hit_record rec, point3_t rand_unit, point3_t *attenuation, ray_t *scattered, point3_t albedo)
+__device__ bool scatter_lambert(hit_record rec, point3_t rand_unit, point3_t *attenuation, ray_t *scattered, point3_t albedo, double time)
 {
     point3_t scatter_dir = vec3_sum_CUDA(rec.normal, rand_unit);
 
@@ -143,7 +150,7 @@ __device__ bool scatter_lambert(hit_record rec, point3_t rand_unit, point3_t *at
 
     scattered->orig = rec.p;
     scattered->dir = scatter_dir;
-    scattered->tm = 0.0;
+    scattered->tm = time;
     attenuation->x = albedo.x;
     attenuation->y = albedo.y;
     attenuation->z = albedo.z;
@@ -191,12 +198,12 @@ __device__ point3_t ray_color(ray_t ray, sphere_t *world, point3_t rand_unit)
             ray_t scattered;
             point3_t attenuation;
             
-            if (rec.mat.t == 0 && scatter_metal(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo))
+            if (rec.mat.t == 0 && scatter_metal(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm))
             {
                 res = vec3_mul(attenuation, res);
                 cur_ray = scattered;
             }
-            else if (rec.mat.t == 1 && scatter_lambert(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo))
+            else if (rec.mat.t == 1 && scatter_lambert(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm))
             {
                 res = vec3_mul(attenuation, res);
                 cur_ray = scattered;

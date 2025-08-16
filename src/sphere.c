@@ -2,7 +2,16 @@
 #include "sphere.h"
 
 double sphere_hit_distance(sphere_t s, ray_t r) {
-  point3_t oc = vec3_sub(s.center, r.orig);
+
+  point3_t current_center;
+  if (!s.moving){
+    current_center = s.center_start;
+  } else {
+    point3_t dist = vec3_mul_sc(vec3_sub(s.center_start,s.center_end),r.tm);
+    current_center = vec3_sum(s.center_start,dist);
+  }
+
+  point3_t oc = vec3_sub(current_center, r.orig);
 
   // quadratic equation
 
@@ -26,4 +35,21 @@ double sphere_hit_distance(sphere_t s, ray_t r) {
     return -1.0; // No valid intersection
   }
 }
+/*
+ray_t sphere_center(point3_t center1, point3_t center2){
+  ray_t res;
+  res.orig = center1;
+  res.tm = 0.0;
 
+  if (center2.x == INFINITY){
+    res.dir = {0,0,0};
+    return res;
+  }
+
+  res.dir.x = center2.x - center1.x;
+  res.dir.y = center2.y - center1.y;
+  res.dir.z = center2.z - center1.z;
+
+  return res;
+}
+*/
