@@ -4,6 +4,11 @@
 #include <stdint.h>
 #include <stdio.h>
 
+
+__constant__ int device_image_width;
+__constant__ int device_image_height;
+
+
 // ATTENZIONE: Da  qui funzioni solo __device__ trasposte qui
 // AGGIUNTO in render.h la inclusione del file utils.h, se da errore, togli
 
@@ -74,6 +79,21 @@ __device__ void set_face_normal(ray_t r, point3_t outward_normal, hit_record *re
     }
 }
 
+__device__ void get_sphere_uv(point3_t p, double &u, double &v) {
+  // p: a given point on the sphere of radius one, centered at the origin.
+  // u: returned value [0,1] of angle around the Y axis from X=-1.
+  // v: returned value [0,1] of angle from Y=-1 to Y=+1.
+  //     <1 0 0> yields <0.50 0.50>       <-1  0  0> yields <0.00 0.50>
+  //     <0 1 0> yields <0.50 1.00>       < 0 -1  0> yields <0.50 0.00>
+  //     <0 0 1> yields <0.25 0.50>       < 0  0 -1> yields <0.75 0.50>
+
+  double theta = acos(-p.y);
+  double phi = atan2(-p.z, p.x) + M_PI;
+
+  u = phi / (2*M_PI);
+  v = theta / M_PI;
+}
+
 __device__ bool hit(ray_t r, double ray_tmin, double ray_tmax, hit_record *rec, sphere_t s)
 {
     point3_t current_center;
@@ -107,6 +127,7 @@ __device__ bool hit(ray_t r, double ray_tmin, double ray_tmax, hit_record *rec, 
     rec->p = ray_at(r, rec->t);
     point3_t outward_normal = vec3_div_sc_CUDA((vec3_sub_CUDA(rec->p, current_center)), s.radius);
     set_face_normal(r, outward_normal, rec);
+    get_sphere_uv(outward_normal, rec->u, rec->v);
     rec->mat = s.mat;
 
     return true;
@@ -139,6 +160,37 @@ __device__ bool vec3_near_zero(point3_t v)
     return (fabs(v.x) < s) && (fabs(v.y) < s) && (fabs(v.z) < s);
 }
 
+__device__ point3_t checker_tex_value(double u, double v, const point3_t p, double scale, bool sphere){
+    int x, y, z = 0;
+    int i, j = 0;
+    point3_t res;
+
+    if (sphere){
+        i = u*(device_image_width - 1);
+        j = v*(device_image_height - 1);
+        
+        x = floor(i / scale);
+        y = floor(j / scale);
+        if ((x+y)%2 == 0){
+            res.x = 0.9; res.y = 0.9; res.z = 0.9;
+        } else {
+            res.x = 0.2; res.y = 0.3; res.z = 0.1;
+        }
+    } else {
+        x = floor(p.x / scale);
+        y = floor(p.y / scale);
+        z = floor(p.z / scale);
+
+        if (((x+y+z)%2) == 0){
+            res.x = 0.9; res.y = 0.9; res.z = 0.9;
+        } else {
+            res.x = 0.2; res.y = 0.3; res.z = 0.1;
+        }
+    }
+
+    return res;
+}
+
 __device__ bool scatter_lambert(hit_record rec, point3_t rand_unit, point3_t *attenuation, ray_t *scattered, point3_t albedo, double time)
 {
     point3_t scatter_dir = vec3_sum_CUDA(rec.normal, rand_unit);
@@ -151,9 +203,17 @@ __device__ bool scatter_lambert(hit_record rec, point3_t rand_unit, point3_t *at
     scattered->orig = rec.p;
     scattered->dir = scatter_dir;
     scattered->tm = time;
-    attenuation->x = albedo.x;
-    attenuation->y = albedo.y;
-    attenuation->z = albedo.z;
+    if (rec.mat.tex.inv_scale == 0.0){
+        attenuation->x = albedo.x;
+        attenuation->y = albedo.y;
+        attenuation->z = albedo.z;
+    } else {
+        point3_t temp = checker_tex_value(rec.u, rec.v, rec.p, rec.mat.tex.inv_scale, rec.mat.tex.sphere);
+
+        attenuation->x = temp.x;
+        attenuation->y = temp.y;
+        attenuation->z = temp.z;
+    }
 
     return true;
 }
@@ -249,12 +309,12 @@ __global__ void setup_kernel(curandState* state, uint64_t seed)
     curand_init(seed, tid, 0, &state[tid]);
 }
 
-__global__ void kernelrender(curandState* rand, point3_t *device_buffer, int *device_num_samples, int *device_image_width, int *device_image_height, point3_t *device_loc00, point3_t *device_camera_center,
+__global__ void kernelrender(curandState* rand, point3_t *device_buffer, int *device_num_samples, point3_t *device_loc00, point3_t *device_camera_center,
                              point3_t *device_pixel_delta_u, point3_t *device_pixel_delta_v, sphere_t *device_world)
 {
     //Variabili locali per memorizzarli nei registri e aumentare speedup
-    int image_width = *device_image_width;
-    int image_height = *device_image_height;
+    int image_width = device_image_width;
+    int image_height = device_image_height;
     point3_t loc00 = *device_loc00;
     point3_t camera_center = *device_camera_center;
     point3_t pixel_delta_u = *device_pixel_delta_u;
@@ -316,7 +376,7 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
     int *device_num_samples;
     checkCudaError(cudaMalloc((void **)&device_num_samples, sizeof(int)), "Failed to allocate device_num_samples");
     cudaMemcpy(device_num_samples, &n_samples, sizeof(int), cudaMemcpyHostToDevice);
-
+/*
     int *device_image_width;
     checkCudaError(cudaMalloc((void **)&device_image_width, sizeof(int)), "Failed to allocate device_image_width");
     cudaMemcpy(device_image_width, &image_width, sizeof(int), cudaMemcpyHostToDevice);
@@ -324,6 +384,10 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
     int *device_image_height;
     checkCudaError(cudaMalloc((void **)&device_image_height, sizeof(int)), "Failed to allocate device_image_height");
     cudaMemcpy(device_image_height, &image_height, sizeof(int), cudaMemcpyHostToDevice);
+*/
+
+    cudaMemcpyToSymbol(device_image_width, &image_width, sizeof(int));
+    cudaMemcpyToSymbol(device_image_height, &image_height, sizeof(int));
 
     point3_t *device_loc00;
     checkCudaError(cudaMalloc((void **)&device_loc00, sizeof(point3_t)), "Failed to allocate device_loc00");
@@ -364,7 +428,7 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
     setup_kernel<<<grid,block>>>(dev_curand_states, time(NULL));
     cudaDeviceSynchronize();
 
-    kernelrender<<<grid,block>>>(dev_curand_states, device_buffer, device_num_samples, device_image_width, device_image_height, device_loc00, device_camera_center, device_pixel_delta_u, device_pixel_delta_v, device_world);
+    kernelrender<<<grid,block>>>(dev_curand_states, device_buffer, device_num_samples, device_loc00, device_camera_center, device_pixel_delta_u, device_pixel_delta_v, device_world);
     cudaDeviceSynchronize();
 
     cudaMemcpy(host_buffer, device_buffer, image_width * image_height * sizeof(point3_t), cudaMemcpyDeviceToHost);
@@ -372,8 +436,8 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
 
     cudaFree(device_buffer);
     cudaFree(device_num_samples);
-    cudaFree(device_image_width);
-    cudaFree(device_image_height);
+    //cudaFree(device_image_width);
+    //cudaFree(device_image_height);
     cudaFree(device_loc00);
     cudaFree(device_camera_center);
     cudaFree(device_pixel_delta_u);

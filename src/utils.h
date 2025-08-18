@@ -67,11 +67,17 @@ typedef struct {
   double z;
 } point3_t;
 
+typedef struct {
+  double inv_scale;
+  bool sphere;
+} checker_texture;
+
 typedef enum {metal, lambertian} type;
 
 typedef struct {
   type t;
   point3_t albedo;
+  checker_texture tex;
 } material;
 
 typedef struct {
@@ -94,6 +100,8 @@ typedef struct {
   double t;
   bool front_face;
   material mat;
+  double u;
+  double v;
 } hit_record;
 
 // Genera un numero casuale tra 0 e 1
