@@ -79,6 +79,16 @@ __device__ void set_face_normal(ray_t r, point3_t outward_normal, hit_record *re
     }
 }
 
+__device__ point3_t emitted(hit_record rec){
+    if (rec.mat.t != 2){
+        return {0,0,0};
+    }
+
+    point3_t light = {4,4,4};
+
+    return light;
+}  
+
 __device__ void get_sphere_uv(point3_t p, double &u, double &v) {
   // p: a given point on the sphere of radius one, centered at the origin.
   // u: returned value [0,1] of angle around the Y axis from X=-1.
@@ -87,11 +97,8 @@ __device__ void get_sphere_uv(point3_t p, double &u, double &v) {
   //     <0 1 0> yields <0.50 1.00>       < 0 -1  0> yields <0.50 0.00>
   //     <0 0 1> yields <0.25 0.50>       < 0  0 -1> yields <0.75 0.50>
 
-  double theta = acos(-p.y);
-  double phi = atan2(-p.z, p.x) + M_PI;
-
-  u = phi / (2*M_PI);
-  v = theta / M_PI;
+  u = (atan2(-p.z, p.x) + M_PI) / (2*M_PI);
+  v = acos(-p.y) / M_PI;
 }
 
 __device__ bool hit(ray_t r, double ray_tmin, double ray_tmax, hit_record *rec, sphere_t s)
@@ -232,6 +239,7 @@ __device__ point3_t background_color(ray_t r)
     return vec3_sum_CUDA(black_scaled, background_scaled);
 }
 
+
 __device__ point3_t ray_color(ray_t ray, sphere_t *world, point3_t rand_unit)
 {
     hit_record rec;
@@ -288,6 +296,53 @@ __device__ point3_t ray_color(ray_t ray, sphere_t *world, point3_t rand_unit)
     res.x = 0;
     res.y = 0;
     res.z = 0;
+    return res;
+}
+
+__device__ point3_t light_ray_color(ray_t ray, sphere_t *world, point3_t rand_unit)
+{
+    hit_record rec;
+    hit_record temp_rec;
+    bool hit_anything = false;
+    double closest = INFINITY;
+    point3_t res = {0, 0, 0};
+    point3_t background = {0,0,0};
+    point3_t attenuation_acc = {1,1,1};
+    ray_t cur_ray = ray;
+
+    for (int k = 0; k < num_depth; k++)
+    {
+        for (int i = 0; i < num_s; i++)
+        {
+            if (hit(cur_ray, 0.001, closest, &temp_rec, world[i]))
+            {
+                hit_anything = true;
+                closest = temp_rec.t;
+                rec = temp_rec;
+            }
+        }
+
+        if (!hit_anything)
+        {
+            return background;
+        }
+
+        ray_t scattered;
+        point3_t attenuation;
+        point3_t color_from_emission = emitted(rec);
+        res = vec3_sum_CUDA(res,vec3_mul(attenuation_acc, color_from_emission));
+        
+        if ((rec.mat.t == 0 && !scatter_metal(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm) || (rec.mat.t == 1 && !scatter_lambert(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm)))){
+            break;
+        }
+
+        attenuation_acc = vec3_mul(attenuation,attenuation_acc);
+        cur_ray = scattered;
+
+        hit_anything = false;
+        closest = INFINITY;
+    }
+
     return res;
 }
 
@@ -356,6 +411,54 @@ __global__ void kernelrender(curandState* rand, point3_t *device_buffer, int *de
     device_buffer[j * image_width + i] = vec3_div_sc_CUDA(pixel_color, n_samples);
 }
 
+
+__global__ void lightkernelrender(curandState* rand, point3_t *device_buffer, int *device_num_samples, point3_t *device_loc00, point3_t *device_camera_center,
+                             point3_t *device_pixel_delta_u, point3_t *device_pixel_delta_v, sphere_t *device_world)
+{
+    //Variabili locali per memorizzarli nei registri e aumentare speedup
+    int image_width = device_image_width;
+    int image_height = device_image_height;
+    point3_t loc00 = *device_loc00;
+    point3_t camera_center = *device_camera_center;
+    point3_t pixel_delta_u = *device_pixel_delta_u;
+    point3_t pixel_delta_v = *device_pixel_delta_v;
+    int n_samples = *device_num_samples;
+
+    int i = threadIdx.x;
+    int j = blockIdx.y;
+    int tid = i + j*blockDim.x;
+    curandState state = rand[tid];
+    //int index = tid * (n_samples + 2);
+
+    if (i >= image_width || j >= image_height)
+    {
+        return;
+    }
+
+    point3_t pixel_color;
+    pixel_color.x = 0;
+    pixel_color.y = 0;
+    pixel_color.z = 0;
+/*
+    float temp1 = curand_uniform(&rand[tid]);
+    float temp2 = curand_uniform(&rand[tid]);
+
+    debug[index] = temp1;
+    debug[index + 1] = temp2;
+*/
+    point3_t rand_unit = {curand_uniform(&state), curand_uniform(&state), 0};
+
+    for (int k = 0; k < n_samples; k++)
+    {
+        //temp1 = curand_uniform(&rand[tid]);
+        //debug[index+k] = temp1;
+        ray_t r = get_ray_sample(curand_uniform(&state), curand_uniform(&state), i, j, loc00, camera_center, pixel_delta_u, pixel_delta_v, &state);
+        pixel_color = vec3_sum_CUDA(light_ray_color(r, device_world, rand_unit), pixel_color);
+    }
+
+    device_buffer[j * image_width + i] = vec3_div_sc_CUDA(pixel_color, n_samples);
+}
+
 // FINE KERNEL
 
 void checkCudaError(cudaError_t err, const char *msg)
@@ -376,15 +479,6 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
     int *device_num_samples;
     checkCudaError(cudaMalloc((void **)&device_num_samples, sizeof(int)), "Failed to allocate device_num_samples");
     cudaMemcpy(device_num_samples, &n_samples, sizeof(int), cudaMemcpyHostToDevice);
-/*
-    int *device_image_width;
-    checkCudaError(cudaMalloc((void **)&device_image_width, sizeof(int)), "Failed to allocate device_image_width");
-    cudaMemcpy(device_image_width, &image_width, sizeof(int), cudaMemcpyHostToDevice);
-
-    int *device_image_height;
-    checkCudaError(cudaMalloc((void **)&device_image_height, sizeof(int)), "Failed to allocate device_image_height");
-    cudaMemcpy(device_image_height, &image_height, sizeof(int), cudaMemcpyHostToDevice);
-*/
 
     cudaMemcpyToSymbol(device_image_width, &image_width, sizeof(int));
     cudaMemcpyToSymbol(device_image_height, &image_height, sizeof(int));
@@ -413,7 +507,6 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
     //float* dev_debug_random;
     //cudaMalloc(&dev_debug_random, sizeof(float) * image_width * image_height * (n_samples + 2)); // max 10 valori per pixel
 
-
     dim3 grid(1, image_height, 1);
     dim3 block(image_width, 1, 1);
 
@@ -429,6 +522,78 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
     cudaDeviceSynchronize();
 
     kernelrender<<<grid,block>>>(dev_curand_states, device_buffer, device_num_samples, device_loc00, device_camera_center, device_pixel_delta_u, device_pixel_delta_v, device_world);
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(host_buffer, device_buffer, image_width * image_height * sizeof(point3_t), cudaMemcpyDeviceToHost);
+    //cudaMemcpy(host_random,dev_debug_random,sizeof(float) * image_width * image_height * (n_samples + 2), cudaMemcpyDeviceToHost);
+
+    cudaFree(device_buffer);
+    cudaFree(device_num_samples);
+    //cudaFree(device_image_width);
+    //cudaFree(device_image_height);
+    cudaFree(device_loc00);
+    cudaFree(device_camera_center);
+    cudaFree(device_pixel_delta_u);
+    cudaFree(device_pixel_delta_v);
+    cudaFree(device_world);
+    cudaFree(dev_curand_states);
+    //cudaFree(dev_debug_random);
+
+    return;
+}
+
+extern "C" void light_render(point3_t *host_buffer, int n_samples, int image_width, int image_height, point3_t loc00, point3_t camera_center,
+                       point3_t pixel_delta_u, point3_t pixel_delta_v, sphere_t *world)
+{
+    point3_t *device_buffer;
+    checkCudaError(cudaMalloc((void **)&device_buffer, image_width * image_height * sizeof(point3_t)), "Failed to allocate device_buffer");
+
+    int *device_num_samples;
+    checkCudaError(cudaMalloc((void **)&device_num_samples, sizeof(int)), "Failed to allocate device_num_samples");
+    cudaMemcpy(device_num_samples, &n_samples, sizeof(int), cudaMemcpyHostToDevice);
+
+    cudaMemcpyToSymbol(device_image_width, &image_width, sizeof(int));
+    cudaMemcpyToSymbol(device_image_height, &image_height, sizeof(int));
+
+    point3_t *device_loc00;
+    checkCudaError(cudaMalloc((void **)&device_loc00, sizeof(point3_t)), "Failed to allocate device_loc00");
+    cudaMemcpy(device_loc00, &loc00, sizeof(point3_t), cudaMemcpyHostToDevice);
+
+    point3_t *device_camera_center;
+    checkCudaError(cudaMalloc((void **)&device_camera_center, sizeof(point3_t)), "Failed to allocate device_camera_center");
+    cudaMemcpy(device_camera_center, &camera_center, sizeof(point3_t), cudaMemcpyHostToDevice);
+
+    point3_t *device_pixel_delta_u;
+    checkCudaError(cudaMalloc((void **)&device_pixel_delta_u, sizeof(point3_t)), "Failed to allocate device_pixel_delta_u");
+    cudaMemcpy(device_pixel_delta_u, &pixel_delta_u, sizeof(point3_t), cudaMemcpyHostToDevice);
+
+    point3_t *device_pixel_delta_v;
+    checkCudaError(cudaMalloc((void **)&device_pixel_delta_v, sizeof(point3_t)), "Failed to allocate device_pixel_delta_v");
+    cudaMemcpy(device_pixel_delta_v, &pixel_delta_v, sizeof(point3_t), cudaMemcpyHostToDevice);
+
+    sphere_t *device_world;
+    checkCudaError(cudaMalloc((void **)&device_world, 4 * sizeof(sphere_t)), "Failed to allocate device_world");
+    cudaMemcpy(device_world, world, 4 * sizeof(sphere_t), cudaMemcpyHostToDevice);
+
+    //DEBUG ONLY:
+    //float* dev_debug_random;
+    //cudaMalloc(&dev_debug_random, sizeof(float) * image_width * image_height * (n_samples + 2)); // max 10 valori per pixel
+
+    dim3 grid(1, image_height, 1);
+    dim3 block(image_width, 1, 1);
+
+    //PER DEBUG:
+    //int total_curand_states = image_width * image_height * (n_samples + 2);
+    int total_curand_states = image_width * image_height;
+    curandState* dev_curand_states;
+    checkCudaError(cudaMalloc(&dev_curand_states, total_curand_states * sizeof(curandState)), "Failed to allocate dev_curand_states");
+
+    //int threads_per_block = 256;
+    //int blocks = (total_curand_states + threads_per_block - 1) / threads_per_block;
+    setup_kernel<<<grid,block>>>(dev_curand_states, time(NULL));
+    cudaDeviceSynchronize();
+
+    lightkernelrender<<<grid,block>>>(dev_curand_states, device_buffer, device_num_samples, device_loc00, device_camera_center, device_pixel_delta_u, device_pixel_delta_v, device_world);
     cudaDeviceSynchronize();
 
     cudaMemcpy(host_buffer, device_buffer, image_width * image_height * sizeof(point3_t), cudaMemcpyDeviceToHost);

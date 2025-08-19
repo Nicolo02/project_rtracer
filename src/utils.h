@@ -72,7 +72,7 @@ typedef struct {
   bool sphere;
 } checker_texture;
 
-typedef enum {metal, lambertian} type;
+typedef enum {metal, lambertian, diffuse_light} type;
 
 typedef struct {
   type t;

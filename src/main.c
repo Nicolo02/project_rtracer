@@ -30,6 +30,87 @@ void write_color(FILE *out, point3_t* pixel_color, int image_width, int image_he
   }
 }
 
+void texture_world(sphere_t* world){
+  material mat;
+  point3_t temp = {0, -100.5, -1};
+  point3_t alb_temp = {0.8,0.8,0.0};
+
+  mat.t = lambertian; mat.albedo = alb_temp; mat.tex.inv_scale = 0.32; mat.tex.sphere = false;
+  world[0].center_start = temp;
+  world[0].radius = 100;
+  world[0].mat = mat;
+  world[0].moving = false;
+
+  temp.x = 0; temp.y = 0; temp.z = -1.2;
+  alb_temp.x = 0.3; alb_temp.y = 0.5; alb_temp.z = 0.1; mat.tex.inv_scale = 0.52; mat.tex.sphere = true;
+  world[1].center_start = temp;
+  temp.y = random_double_range(0,0.5);
+  world[1].center_end = temp;
+  world[1].radius = 0.5;
+  mat.albedo = alb_temp;
+  world[1].mat = mat;
+  world[1].moving = false;
+
+  mat.tex.inv_scale = 0.0;
+  mat.tex.sphere = false;
+  temp.x = -1.0; temp.y = 0; temp.z = -1.0;
+  alb_temp.x = 0.8; alb_temp.y = 0.8; alb_temp.z = 0.8;
+  world[2].center_start = temp;
+  temp.y = random_double_range(0,0.5);
+  world[2].center_end = temp;
+  world[2].radius = 0.5;
+  mat.t = metal;
+  mat.albedo = alb_temp;
+  world[2].mat = mat;
+  world[2].moving = false;
+
+  temp.x = 1.0; temp.y = 0; temp.z = -1.0;
+  alb_temp.x = 0.8; alb_temp.y = 0.6; alb_temp.z = 0.2;
+  world[3].center_start = temp;
+  temp.y = random_double_range(0,0.5);
+  world[3].center_end = temp;
+  world[3].radius = 0.5;
+  mat.albedo = alb_temp;
+  world[3].mat = mat;
+  world[3].moving = false;
+}
+
+void light_world(sphere_t* world){
+  material mat;
+  point3_t temp = {0, -100.5, -1};
+  point3_t alb_temp = {0.8,0.8,0.0};
+
+  mat.t = lambertian; mat.albedo = alb_temp; mat.tex.inv_scale = 0.32; mat.tex.sphere = false;
+  world[0].center_start = temp;
+  world[0].radius = 100;
+  world[0].mat = mat;
+  world[0].moving = false;
+
+  temp.x = 0; temp.y = 0; temp.z = -1.2;
+  alb_temp.x = 0.3; alb_temp.y = 0.5; alb_temp.z = 0.1; mat.tex.inv_scale = 0.52; mat.tex.sphere = true;
+  world[1].center_start = temp;
+  temp.y = random_double_range(0,0.5);
+  world[1].center_end = temp;
+  world[1].radius = 0.5;
+  mat.albedo = alb_temp;
+  world[1].mat = mat;
+  world[1].moving = false;
+
+  temp.x = 0.5; temp.y = 1; temp.z = -0.5;
+  mat.t = diffuse_light;
+  world[2].center_start = temp;
+  world[2].radius = 0.5;
+  world[2].mat = mat;
+  world[2].moving = false;
+
+  temp.x = -1.5; temp.y = 1; temp.z = -1.5;
+  mat.t = diffuse_light;
+  world[3].center_start = temp;
+  world[3].radius = 0.2;
+  world[3].mat = mat;
+  world[3].moving = false;
+}
+
 int main(void)
 {
   // Image
@@ -46,49 +127,11 @@ int main(void)
   // World
   // Cambiare il numero di num_s dentro globals.h per definire la grandezza dell'array
   sphere_t world[num_s];
-  material mat;
 
-  point3_t temp = {0, -100.5, -1};
-  point3_t alb_temp = {0.8,0.8,0.0};
-  mat.t = lambertian; mat.albedo = alb_temp; mat.tex.inv_scale = 0.32; mat.tex.sphere = false;
-  world[0].center_start = temp;
-  world[0].radius = 100;
-  world[0].mat = mat;
-  world[0].moving = false;
+  //USE ONLY ONE: texture_world with function render AND light_world ONLY with light_render
+  texture_world(world);
+  //light_world(world);
 
-  temp.x = 0; temp.y = 0; temp.z = -1.2;
-  alb_temp.x = 0.3; alb_temp.y = 0.5; alb_temp.z = 0.1; mat.tex.inv_scale = 0.52; mat.tex.sphere = true;
-  world[1].center_start = temp;
-  temp.y = random_double_range(0,0.5);
-  world[1].center_end = temp;
-  world[1].radius = 0.5;
-  mat.albedo = alb_temp;
-  world[1].mat = mat;
-  world[1].moving = false;
-/*
-  mat.tex.inv_scale = 0.0;
-  mat.tex.sphere = false;
-  temp.x = -1.0; temp.y = 0; temp.z = -1.0;
-  alb_temp.x = 0.4; alb_temp.y = 0.5; alb_temp.z = 0.56;
-  world[2].center_start = temp;
-  temp.y = random_double_range(0,0.5);
-  world[2].center_end = temp;
-  world[2].radius = 0.5;
-  mat.t = metal;
-  mat.albedo = alb_temp;
-  world[2].mat = mat;
-  world[2].moving = false;
-
-  temp.x = 1.0; temp.y = 0; temp.z = -1.0;
-  alb_temp.x = 0.8; alb_temp.y = 0.7; alb_temp.z = 0.7;
-  world[3].center_start = temp;
-  temp.y = random_double_range(0,0.5);
-  world[3].center_end = temp;
-  world[3].radius = 0.5;
-  mat.albedo = alb_temp;
-  world[3].mat = mat;
-  world[3].moving = false;
-*/
   // Camera
   double focal_length = 1.0;
   double viewport_height = 2.0;
@@ -152,8 +195,9 @@ int main(void)
 
   //float* host_debug_random = (float*)malloc(sizeof(float) * image_width * image_height * (num_samples+2));
 
-  //render logic
+  //REMBER: render ONLY with function texture_world AND light_render ONLY with light_world function
   render(host_pixel_buffer, num_samples, image_width, image_height, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v, world);
+  //light_render(host_pixel_buffer, num_samples, image_width, image_height, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v, world);
   for (int j = image_height - 1; j >= 0; --j) {
     for (int i = 0; i < image_width; ++i) {
       point3_t pixel = host_pixel_buffer[j * image_width + i];
