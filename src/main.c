@@ -11,6 +11,8 @@
 #include "interval.h"
 #include "render.h"
 
+const bool lightRender = true;
+
 void write_color(FILE *out, point3_t* pixel_color, int image_width, int image_height)
 {
   for (int j = 0; j < image_height; j++) {
@@ -128,9 +130,11 @@ int main(void)
   // Cambiare il numero di num_s dentro globals.h per definire la grandezza dell'array
   sphere_t world[num_s];
 
-  //USE ONLY ONE: texture_world with function render AND light_world ONLY with light_render
-  texture_world(world);
-  //light_world(world);
+  if (lightRender){
+    light_world(world);
+  } else {
+    texture_world(world);
+  }
 
   // Camera
   double focal_length = 1.0;
@@ -195,9 +199,11 @@ int main(void)
 
   //float* host_debug_random = (float*)malloc(sizeof(float) * image_width * image_height * (num_samples+2));
 
-  //REMBER: render ONLY with function texture_world AND light_render ONLY with light_world function
-  render(host_pixel_buffer, num_samples, image_width, image_height, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v, world);
-  //light_render(host_pixel_buffer, num_samples, image_width, image_height, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v, world);
+  if (!lightRender){
+    render(host_pixel_buffer, num_samples, image_width, image_height, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v, world);
+  } else {
+    light_render(host_pixel_buffer, num_samples, image_width, image_height, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v, world);
+  }
   for (int j = image_height - 1; j >= 0; --j) {
     for (int i = 0; i < image_width; ++i) {
       point3_t pixel = host_pixel_buffer[j * image_width + i];

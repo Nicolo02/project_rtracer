@@ -332,7 +332,7 @@ __device__ point3_t light_ray_color(ray_t ray, sphere_t *world, point3_t rand_un
         point3_t color_from_emission = emitted(rec);
         res = vec3_sum_CUDA(res,vec3_mul(attenuation_acc, color_from_emission));
         
-        if ((rec.mat.t == 0 && !scatter_metal(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm) || (rec.mat.t == 1 && !scatter_lambert(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm)))){
+        if ((rec.mat.t == 0 && !scatter_metal(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm)) || (rec.mat.t == 1 && !scatter_lambert(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm))){
             break;
         }
 
