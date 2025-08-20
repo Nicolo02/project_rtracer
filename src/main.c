@@ -13,6 +13,8 @@
 #include "globals.h"
 #include "interval.h"
 
+const bool lightRender = true;
+
 void write_color(FILE *out, point3_t pixel_color)
 {
   double r = linear_to_gamma(pixel_color.x);
@@ -25,6 +27,87 @@ void write_color(FILE *out, point3_t pixel_color)
   int bbyte = (int)(255.999 * clamp(b));
 
   fprintf(out, "%d %d %d\n", rbyte, gbyte, bbyte);
+}
+
+void texture_world(sphere_t* world){
+  material mat;
+  point3_t temp = {0, -100.5, -1};
+  point3_t alb_temp = {0.8,0.8,0.0};
+
+  mat.t = lambertian; mat.albedo = alb_temp; mat.tex.inv_scale = 0.32; mat.tex.sphere = false;
+  world[0].center_start = temp;
+  world[0].radius = 100;
+  world[0].mat = mat;
+  world[0].moving = false;
+
+  temp.x = 0; temp.y = 0; temp.z = -1.2;
+  alb_temp.x = 0.3; alb_temp.y = 0.5; alb_temp.z = 0.1; mat.tex.inv_scale = 0.52; mat.tex.sphere = true;
+  world[1].center_start = temp;
+  temp.y = random_double_range(0,0.5);
+  world[1].center_end = temp;
+  world[1].radius = 0.5;
+  mat.albedo = alb_temp;
+  world[1].mat = mat;
+  world[1].moving = false;
+
+  mat.tex.inv_scale = 0.0;
+  mat.tex.sphere = false;
+  temp.x = -1.0; temp.y = 0; temp.z = -1.0;
+  alb_temp.x = 0.8; alb_temp.y = 0.8; alb_temp.z = 0.8;
+  world[2].center_start = temp;
+  temp.y = random_double_range(0,0.5);
+  world[2].center_end = temp;
+  world[2].radius = 0.5;
+  mat.t = metal;
+  mat.albedo = alb_temp;
+  world[2].mat = mat;
+  world[2].moving = false;
+
+  temp.x = 1.0; temp.y = 0; temp.z = -1.0;
+  alb_temp.x = 0.8; alb_temp.y = 0.6; alb_temp.z = 0.2;
+  world[3].center_start = temp;
+  temp.y = random_double_range(0,0.5);
+  world[3].center_end = temp;
+  world[3].radius = 0.5;
+  mat.albedo = alb_temp;
+  world[3].mat = mat;
+  world[3].moving = true;
+}
+
+void light_world(sphere_t* world){
+  material mat;
+  point3_t temp = {0, -100.5, -1};
+  point3_t alb_temp = {0.8,0.8,0.0};
+
+  mat.t = lambertian; mat.albedo = alb_temp; mat.tex.inv_scale = 0.32; mat.tex.sphere = false;
+  world[0].center_start = temp;
+  world[0].radius = 100;
+  world[0].mat = mat;
+  world[0].moving = false;
+
+  temp.x = 0; temp.y = 0; temp.z = -1.2;
+  alb_temp.x = 0.3; alb_temp.y = 0.5; alb_temp.z = 0.1; mat.tex.inv_scale = 0.52; mat.tex.sphere = true;
+  world[1].center_start = temp;
+  temp.y = random_double_range(0,0.5);
+  world[1].center_end = temp;
+  world[1].radius = 0.5;
+  mat.albedo = alb_temp;
+  world[1].mat = mat;
+  world[1].moving = false;
+
+  temp.x = 0.5; temp.y = 1; temp.z = -0.5;
+  mat.t = diffuse_light;
+  world[2].center_start = temp;
+  world[2].radius = 0.5;
+  world[2].mat = mat;
+  world[2].moving = false;
+
+  temp.x = -1.5; temp.y = 1; temp.z = -1.5;
+  mat.t = diffuse_light;
+  world[3].center_start = temp;
+  world[3].radius = 0.2;
+  world[3].mat = mat;
+  world[3].moving = false;
 }
 
 int main(void)
@@ -47,36 +130,12 @@ int main(void)
   // World
   // Cambiare il numero di num_s dentro globals.h per definire la grandezza dell'array
   sphere_t world[num_s];
-  material mat;
 
-  point3_t temp = {0, -100.5, -1};
-  point3_t alb_temp = {0.8,0.8,0.0};
-  mat.type = lambertian; mat.albedo = alb_temp;
-  world[0].center = temp;
-  world[0].radius = 100;
-  world[0].mat = mat;
-
-  temp.x = 0; temp.y = 0; temp.z = -1.2;
-  alb_temp.x = 0.1; alb_temp.y = 0.2; alb_temp.z = 0.5;
-  world[1].center = temp;
-  world[1].radius = 0.5;
-  mat.albedo = alb_temp;
-  world[1].mat = mat;
-
-  temp.x = -1.0; temp.y = 0; temp.z = -1.0;
-  alb_temp.x = 0.8; alb_temp.y = 0.8; alb_temp.z = 0.8;
-  world[2].center = temp;
-  world[2].radius = 0.5;
-  mat.type = metal;
-  mat.albedo = alb_temp;
-  world[2].mat = mat;
-
-  temp.x = 1.0; temp.y = 0; temp.z = -1.0;
-  alb_temp.x = 0.8; alb_temp.y = 0.6; alb_temp.z = 0.2;
-  world[3].center = temp;
-  world[3].radius = 0.5;
-  mat.albedo = alb_temp;
-  world[3].mat = mat;
+  if (lightRender){
+    light_world(world);
+  } else{
+    texture_world(world);
+  }
 
   // Camera
   double focal_length = 1.0;
@@ -134,21 +193,45 @@ int main(void)
   //render logic
   point3_t pixel_color;
 
-  for (int j = 0; j < image_height; j++)
-  {
-    for (int i = 0; i < image_width; i++)
+  set_image(image_height, image_width);
+
+  if (lightRender){
+
+    for (int j = 0; j < image_height; j++)
     {
-      pixel_color.x=0;
-      pixel_color.y=0;
-      pixel_color.z=0;
-
-      for (int k = 0; k < num_samples; k++)
+      for (int i = 0; i < image_width; i++)
       {
-        ray_t r = get_ray_sample(i, j, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v);
-        pixel_color = vec3_sum(ray_color(r, world), pixel_color);
-      }
+        pixel_color.x=0;
+        pixel_color.y=0;
+        pixel_color.z=0;
 
-      write_color(out_fd, vec3_div_sc(pixel_color, num_samples));
+        for (int k = 0; k < num_samples; k++)
+        {
+          ray_t r = get_ray_sample(i, j, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v);
+          pixel_color = vec3_sum(ray_color(r, world), pixel_color);
+        }
+
+        write_color(out_fd, vec3_div_sc(pixel_color, num_samples));
+      }
+    }
+  } else {
+
+    for (int j = 0; j < image_height; j++)
+    {
+      for (int i = 0; i < image_width; i++)
+      {
+        pixel_color.x=0;
+        pixel_color.y=0;
+        pixel_color.z=0;
+
+        for (int k = 0; k < num_samples; k++)
+        {
+          ray_t r = get_ray_sample(i, j, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v);
+          pixel_color = vec3_sum(light_ray_color(r, world), pixel_color);
+        }
+
+        write_color(out_fd, vec3_div_sc(pixel_color, num_samples));
+      }
     }
   }
 

@@ -10,6 +10,17 @@ point3_t ray_at(ray_t r, double dist)
   return result;
 }
 
+point3_t emitted(hit_record rec){
+    if (rec.mat.t != 2){
+      point3_t res = {0,0,0};
+      return res;
+    }
+
+    point3_t light = {4,4,4};
+
+    return light;
+}
+
 point3_t background_color(ray_t r)
 {
   static point3_t black = {1.0, 1.0, 1.0};
@@ -49,12 +60,12 @@ point3_t ray_color(ray_t ray, sphere_t *world)
 
     if (hit_anything)
     {
-      if (rec.mat.type == metal && scatter_metal(rec, &attenuation, &scattered, rec.mat.albedo))
+      if (rec.mat.t == metal && scatter_metal(rec, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm))
       {
         res = vec3_mul(attenuation, res);
         cur_ray = scattered;
       }
-      else if (rec.mat.type == lambertian && scatter_lambert(rec, &attenuation, &scattered, rec.mat.albedo))
+      else if (rec.mat.t == lambertian && scatter_lambert(rec, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm))
       {
         res = vec3_mul(attenuation, res);
         cur_ray = scattered;
@@ -82,6 +93,53 @@ point3_t ray_color(ray_t ray, sphere_t *world)
   return res;
 }
 
+point3_t light_ray_color(ray_t ray, sphere_t *world)
+{
+    hit_record rec;
+    hit_record temp_rec;
+    bool hit_anything = false;
+    double closest = INFINITY;
+    point3_t res = {0, 0, 0};
+    point3_t background = {0,0,0};
+    point3_t attenuation_acc = {1,1,1};
+    ray_t cur_ray = ray;
+
+    for (int k = 0; k < num_depth; k++)
+    {
+        for (int i = 0; i < num_s; i++)
+        {
+            if (hit(cur_ray, 0.001, closest, &temp_rec, world[i]))
+            {
+                hit_anything = true;
+                closest = temp_rec.t;
+                rec = temp_rec;
+            }
+        }
+
+        if (!hit_anything)
+        {
+            return background;
+        }
+
+        ray_t scattered;
+        point3_t attenuation;
+        point3_t color_from_emission = emitted(rec);
+        res = vec3_sum(res,vec3_mul(attenuation_acc, color_from_emission));
+        
+        if ((rec.mat.t == metal && !scatter_metal(rec, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm)) || (rec.mat.t == lambertian && !scatter_lambert(rec, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm))){
+            break;
+        }
+
+        attenuation_acc = vec3_mul(attenuation,attenuation_acc);
+        cur_ray = scattered;
+
+        hit_anything = false;
+        closest = INFINITY;
+    }
+
+    return res;
+}
+
 // Restituisce un raggio proveniente dall'origine e diretto verso un punto
 // determinato randomicamente intorno al pixel (i,j)
 ray_t get_ray_sample(int i, int j, point3_t loc_00, point3_t camera_center, point3_t pixel_delta_u, point3_t pixel_delta_v)
@@ -90,6 +148,7 @@ ray_t get_ray_sample(int i, int j, point3_t loc_00, point3_t camera_center, poin
   double offset_y = random_double() - 0.5;
   point3_t pixel_sample = vec3_sum(loc_00, vec3_sum(vec3_mul_sc(pixel_delta_u, i + offset_x), vec3_mul_sc(pixel_delta_v, j + offset_y)));
   point3_t ray_direction = vec3_sub(pixel_sample, camera_center);
-  ray_t result = {camera_center, ray_direction};
+  double tm = random_double();
+  ray_t result = {camera_center, ray_direction, tm};
   return result;
 }

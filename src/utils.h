@@ -67,19 +67,30 @@ typedef struct {
 } point3_t;
 
 typedef struct {
-  enum {metal, lambertian} type;
+  double inv_scale;
+  bool sphere;
+} checker_texture;
+
+typedef enum {metal, lambertian, diffuse_light} type;
+
+typedef struct {
+  type t;
   point3_t albedo;
+  checker_texture tex;
 } material;
 
 typedef struct {
   point3_t orig;
   point3_t dir;
+  double tm;
 } ray_t;
 
 typedef struct {
-  point3_t center;
+  point3_t center_start;
+  point3_t center_end;
   double radius;
   material mat;
+  bool moving;
 } sphere_t;
 
 typedef struct {
@@ -88,6 +99,8 @@ typedef struct {
   double t;
   bool front_face;
   material mat;
+  double u;
+  double v;
 } hit_record;
 
 // Genera un numero casuale tra 0 e 1
