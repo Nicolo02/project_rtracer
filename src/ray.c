@@ -11,14 +11,15 @@ point3_t ray_at(ray_t r, double dist)
 }
 
 point3_t emitted(hit_record rec){
-    if (rec.mat.t != diffuse_light){
-      point3_t res = {0,0,0};
-      return res;
-    }
+  point3_t light;
 
-    point3_t light = {4,4,4};
+  if (rec.mat.t != diffuse_light){
+    light.x = 0; light.y = 0; light.z = 0;
+  } else {
+    light.x = 10; light.y = 10; light.z = 10;
+  }
 
-    return light;
+  return light;
 }
 
 point3_t background_color(ray_t r)
@@ -101,8 +102,10 @@ point3_t light_ray_color(ray_t ray, sphere_t *world)
     double closest = INFINITY;
     point3_t res = {0, 0, 0};
     const point3_t background = {0,0,0};
-    point3_t attenuation_acc = {1,1,1};
     ray_t cur_ray = ray;
+    ray_t scattered;
+    point3_t attenuation;
+    point3_t color_from_emission;
 
     for (int k = 0; k < num_depth; k++)
     {
@@ -121,16 +124,14 @@ point3_t light_ray_color(ray_t ray, sphere_t *world)
             return background;
         }
 
-        ray_t scattered;
-        point3_t attenuation;
-        point3_t color_from_emission = emitted(rec);
-        res = vec3_sum(res,vec3_mul(attenuation_acc, color_from_emission));
+        color_from_emission = emitted(rec);
         
         if ((rec.mat.t == metal && !scatter_metal(rec, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm)) || (rec.mat.t == lambertian && !scatter_lambert(rec, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm))){
+            res = vec3_sum(res, color_from_emission);
             break;
         }
 
-        attenuation_acc = vec3_mul(attenuation,attenuation_acc);
+        res = vec3_mul(attenuation,vec3_sum(res,color_from_emission));
         cur_ray = scattered;
 
         hit_anything = false;

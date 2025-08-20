@@ -119,7 +119,7 @@ bool scatter_metal(hit_record rec, point3_t *attenuation, ray_t *scattered, poin
   scattered->orig = rec.p; scattered->dir = reflected; scattered->tm = time;
   attenuation->x = albedo.x; attenuation->y = albedo.y; attenuation->z = albedo.z;
 
-  return true;
+  return (vec3_dot(scattered->dir,rec.normal) > 0);
 }
 
 bool scatter_lambert(hit_record rec, point3_t *attenuation, ray_t *scattered, point3_t albedo, double time){

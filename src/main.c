@@ -71,7 +71,7 @@ void texture_world(sphere_t* world){
   world[3].radius = 0.5;
   mat.albedo = alb_temp;
   world[3].mat = mat;
-  world[3].moving = true;
+  world[3].moving = false;
 }
 
 void light_world(sphere_t* world){
@@ -96,16 +96,20 @@ void light_world(sphere_t* world){
   world[1].moving = false;
 
   temp.x = 1.5; temp.y = 0; temp.z = -0.5;
+  alb_temp.x = 1; alb_temp.y = 1; alb_temp.z = 1;
   mat.t = diffuse_light;
   world[2].center_start = temp;
   world[2].radius = 0.5;
+  mat.albedo = alb_temp;
   world[2].mat = mat;
   world[2].moving = false;
 
   temp.x = -0.5; temp.y = 0.2; temp.z = 1;
+  alb_temp.x = 1; alb_temp.y = 1; alb_temp.z = 1;
   mat.t = diffuse_light;
   world[3].center_start = temp;
   world[3].radius = 0.2;
+  mat.albedo = alb_temp;
   world[3].mat = mat;
   world[3].moving = false;
 }
