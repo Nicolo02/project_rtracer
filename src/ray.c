@@ -11,7 +11,7 @@ point3_t ray_at(ray_t r, double dist)
 }
 
 point3_t emitted(hit_record rec){
-    if (rec.mat.t != 2){
+    if (rec.mat.t != diffuse_light){
       point3_t res = {0,0,0};
       return res;
     }
@@ -100,7 +100,7 @@ point3_t light_ray_color(ray_t ray, sphere_t *world)
     bool hit_anything = false;
     double closest = INFINITY;
     point3_t res = {0, 0, 0};
-    point3_t background = {0,0,0};
+    const point3_t background = {0,0,0};
     point3_t attenuation_acc = {1,1,1};
     ray_t cur_ray = ray;
 

@@ -85,7 +85,7 @@ void light_world(sphere_t* world){
   world[0].mat = mat;
   world[0].moving = false;
 
-  temp.x = 0; temp.y = 0; temp.z = -1.2;
+  temp.x = 0; temp.y = 0; temp.z = -1;
   alb_temp.x = 0.3; alb_temp.y = 0.5; alb_temp.z = 0.1; mat.tex.inv_scale = 0.52; mat.tex.sphere = true;
   world[1].center_start = temp;
   temp.y = random_double_range(0,0.5);
@@ -95,14 +95,14 @@ void light_world(sphere_t* world){
   world[1].mat = mat;
   world[1].moving = false;
 
-  temp.x = 0.5; temp.y = 1; temp.z = -0.5;
+  temp.x = 1.5; temp.y = 0; temp.z = -0.5;
   mat.t = diffuse_light;
   world[2].center_start = temp;
   world[2].radius = 0.5;
   world[2].mat = mat;
   world[2].moving = false;
 
-  temp.x = -1.5; temp.y = 1; temp.z = -1.5;
+  temp.x = -0.5; temp.y = 0.2; temp.z = 1;
   mat.t = diffuse_light;
   world[3].center_start = temp;
   world[3].radius = 0.2;
@@ -144,7 +144,7 @@ int main(void)
 
   RT_DEBUG("viewport: %f %f", viewport_width, viewport_height);
 
-  point3_t camera_center = {0, 0, 0}; // doveva essere un point3
+  point3_t camera_center = {0, 0, 1};
   RT_DEBUG("camera_center: %f %f %f", camera_center.x, camera_center.y, camera_center.z);
 
   // Calculate the vectors across the horizontal and down the vertical viewport
@@ -208,7 +208,7 @@ int main(void)
         for (int k = 0; k < num_samples; k++)
         {
           ray_t r = get_ray_sample(i, j, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v);
-          pixel_color = vec3_sum(ray_color(r, world), pixel_color);
+          pixel_color = vec3_sum(light_ray_color(r, world), pixel_color);
         }
 
         write_color(out_fd, vec3_div_sc(pixel_color, num_samples));
@@ -227,7 +227,7 @@ int main(void)
         for (int k = 0; k < num_samples; k++)
         {
           ray_t r = get_ray_sample(i, j, pixel00_loc, camera_center, pixel_delta_u, pixel_delta_v);
-          pixel_color = vec3_sum(light_ray_color(r, world), pixel_color);
+          pixel_color = vec3_sum(ray_color(r, world), pixel_color);
         }
 
         write_color(out_fd, vec3_div_sc(pixel_color, num_samples));
