@@ -89,7 +89,7 @@ void light_world(sphere_t* world){
   world[0].moving = false;
 
   temp.x = 0; temp.y = 0; temp.z = -1.2;
-  alb_temp.x = 0.3; alb_temp.y = 0.5; alb_temp.z = 0.1; mat.tex.inv_scale = 0.52; mat.tex.sphere = true;
+  alb_temp.x = 0.3; alb_temp.y = 0.5; alb_temp.z = 0.1; mat.tex.inv_scale = 0.60; mat.tex.sphere = true;
   world[1].center_start = temp;
   temp.y = random_double_range(0,0.5);
   world[1].center_end = temp;
@@ -105,7 +105,7 @@ void light_world(sphere_t* world){
   world[2].mat = mat;
   world[2].moving = false;
 
-  temp.x = -1.5; temp.y = 1; temp.z = -1.5;
+  temp.x = -0.7; temp.y = 0.5; temp.z = -0.2;
   mat.t = diffuse_light;
   world[3].center_start = temp;
   world[3].radius = 0.2;

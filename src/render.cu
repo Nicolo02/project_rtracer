@@ -299,19 +299,65 @@ __device__ point3_t ray_color(ray_t ray, sphere_t *world, point3_t rand_unit)
     return res;
 }
 
+/*
+point3_t light_ray_color(ray_t ray, sphere_t *world)
+{
+    const point3_t background = (point3_t){0,0,0};
+    point3_t L     = {0,0,0};
+    point3_t beta  = {1,1,1};
+    ray_t cur_ray  = ray;
+    ray_t scattered;
+    hit_record rec, temp_rec;
+    point3_t attenuation;
+    bool hit_anything;
+    double closest;
+
+    for (int depth = 0; depth < num_depth; ++depth) {
+        closest = INFINITY;
+        hit_anything = false;
+
+        for (int i = 0; i < num_s; ++i) {
+            if (hit(cur_ray, 0.001, closest, &temp_rec, world[i])) {
+                hit_anything = true;
+                closest = temp_rec.t;
+                rec = temp_rec;
+            }
+        }
+
+        if (!hit_anything) {
+            L = vec3_sum(L, vec3_mul(beta, background));
+            break;
+        }
+        L = vec3_sum(L, vec3_mul(beta, emitted(rec)));
+
+        if ((rec.mat.t == lambertian && !scatter_lambert(rec, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm)) || (rec.mat.t == metal && !scatter_metal(rec, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm)) || rec.mat.t == diffuse_light){
+          break;
+        }
+
+        beta = vec3_mul(beta, attenuation);
+        cur_ray = scattered;
+    }
+    return L;
+}
+*/
+
 __device__ point3_t light_ray_color(ray_t ray, sphere_t *world, point3_t rand_unit)
 {
-    hit_record rec;
-    hit_record temp_rec;
-    bool hit_anything = false;
-    double closest = INFINITY;
-    point3_t res = {0, 0, 0};
-    point3_t background = {0,0,0};
-    point3_t attenuation_acc = {1,1,1};
-    ray_t cur_ray = ray;
+    const point3_t background = (point3_t){0,0,0};
+    point3_t res     = {0,0,0};
+    point3_t beta  = {1,1,1};
+    ray_t cur_ray  = ray;
+    ray_t scattered;
+    hit_record rec, temp_rec;
+    point3_t attenuation;
+    bool hit_anything;
+    double closest;
 
     for (int k = 0; k < num_depth; k++)
     {
+        closest = INFINITY;
+        hit_anything = false;
+
         for (int i = 0; i < num_s; i++)
         {
             if (hit(cur_ray, 0.001, closest, &temp_rec, world[i]))
@@ -322,25 +368,18 @@ __device__ point3_t light_ray_color(ray_t ray, sphere_t *world, point3_t rand_un
             }
         }
 
-        if (!hit_anything)
-        {
-            return background;
-        }
-
-        ray_t scattered;
-        point3_t attenuation;
-        point3_t color_from_emission = emitted(rec);
-        res = vec3_sum_CUDA(res,vec3_mul(attenuation_acc, color_from_emission));
-        
-        if ((rec.mat.t == 0 && !scatter_metal(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm)) || (rec.mat.t == 1 && !scatter_lambert(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm))){
+        if (!hit_anything) {
+            res = vec3_sum_CUDA(res, vec3_mul(beta, background));
             break;
         }
+        res = vec3_sum_CUDA(res, vec3_mul(beta, emitted(rec)));
+        
+        if ((rec.mat.t == lambertian && !scatter_lambert(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm)) || (rec.mat.t == metal && !scatter_metal(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm)) || rec.mat.t == diffuse_light){
+          break;
+        }
 
-        attenuation_acc = vec3_mul(attenuation,attenuation_acc);
+        beta = vec3_mul(beta, attenuation);
         cur_ray = scattered;
-
-        hit_anything = false;
-        closest = INFINITY;
     }
 
     return res;
