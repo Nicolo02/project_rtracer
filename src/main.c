@@ -104,7 +104,7 @@ void light_world(sphere_t* world){
   world[2].mat = mat;
   world[2].moving = false;
 
-  temp.x = -0.5; temp.y = 0.2; temp.z = 1;
+  temp.x = -1; temp.y = 0.2; temp.z = 0;
   alb_temp.x = 1; alb_temp.y = 1; alb_temp.z = 1;
   mat.t = diffuse_light;
   world[3].center_start = temp;
