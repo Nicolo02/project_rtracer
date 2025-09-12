@@ -18,9 +18,9 @@ void write_color(FILE *out, point3_t* pixel_color, int image_width, int image_he
   for (int j = 0; j < image_height; j++) {
     for (int i = 0; i < image_width; ++i) {
       point3_t pixel = pixel_color[j * image_width + i];
-      double r = linear_to_gamma(pixel.x);
-      double g = linear_to_gamma(pixel.y);
-      double b = linear_to_gamma(pixel.z);
+      float r = linear_to_gamma(pixel.x);
+      float g = linear_to_gamma(pixel.y);
+      float b = linear_to_gamma(pixel.z);
 
       // Translate the [0,1] component values to the byte range [0,255].
       int rbyte = (int)(255.999 * clamp(r));
@@ -46,7 +46,7 @@ void texture_world(sphere_t* world){
   temp.x = 0; temp.y = 0; temp.z = -1.2;
   alb_temp.x = 0.3; alb_temp.y = 0.5; alb_temp.z = 0.1; mat.tex.inv_scale = 0.52; mat.tex.sphere = true;
   world[1].center_start = temp;
-  temp.y = random_double_range(0,0.5);
+  temp.y = random_float_range(0,0.5);
   world[1].center_end = temp;
   world[1].radius = 0.5;
   mat.albedo = alb_temp;
@@ -58,7 +58,7 @@ void texture_world(sphere_t* world){
   temp.x = -1.0; temp.y = 0; temp.z = -1.0;
   alb_temp.x = 0.8; alb_temp.y = 0.8; alb_temp.z = 0.8;
   world[2].center_start = temp;
-  temp.y = random_double_range(0,0.5);
+  temp.y = random_float_range(0,0.5);
   world[2].center_end = temp;
   world[2].radius = 0.5;
   mat.t = metal;
@@ -69,7 +69,7 @@ void texture_world(sphere_t* world){
   temp.x = 1.0; temp.y = 0; temp.z = -1.0;
   alb_temp.x = 0.8; alb_temp.y = 0.6; alb_temp.z = 0.2;
   world[3].center_start = temp;
-  temp.y = random_double_range(0,0.5);
+  temp.y = random_float_range(0,0.5);
   world[3].center_end = temp;
   world[3].radius = 0.5;
   mat.albedo = alb_temp;
@@ -88,27 +88,31 @@ void light_world(sphere_t* world){
   world[0].mat = mat;
   world[0].moving = false;
 
-  temp.x = 0; temp.y = 0; temp.z = -1.2;
-  alb_temp.x = 0.3; alb_temp.y = 0.5; alb_temp.z = 0.1; mat.tex.inv_scale = 0.60; mat.tex.sphere = true;
+  temp.x = 0; temp.y = 0; temp.z = -1;
+  alb_temp.x = 0.3; alb_temp.y = 0.5; alb_temp.z = 0.1; mat.tex.inv_scale = 0.52; mat.tex.sphere = true;
   world[1].center_start = temp;
-  temp.y = random_double_range(0,0.5);
+  temp.y = random_float_range(0,0.5);
   world[1].center_end = temp;
   world[1].radius = 0.5;
   mat.albedo = alb_temp;
   world[1].mat = mat;
   world[1].moving = false;
 
-  temp.x = 0.5; temp.y = 1; temp.z = -0.5;
+  temp.x = 1.5; temp.y = 0; temp.z = -0.5;
+  alb_temp.x = 1; alb_temp.y = 1; alb_temp.z = 1;
   mat.t = diffuse_light;
   world[2].center_start = temp;
   world[2].radius = 0.5;
+  mat.albedo = alb_temp;
   world[2].mat = mat;
   world[2].moving = false;
 
-  temp.x = -0.7; temp.y = 0.5; temp.z = -0.2;
+  temp.x = -1; temp.y = 0.2; temp.z = 0;
+  alb_temp.x = 1; alb_temp.y = 1; alb_temp.z = 1;
   mat.t = diffuse_light;
   world[3].center_start = temp;
   world[3].radius = 0.2;
+  mat.albedo = alb_temp;
   world[3].mat = mat;
   world[3].moving = false;
 }
@@ -116,7 +120,7 @@ void light_world(sphere_t* world){
 int main(void)
 {
   // Image
-  double aspect_ratio = 16.0 / 9.0;
+  float aspect_ratio = 16.0 / 9.0;
   int image_width = 1024;
 
   // Calculate the image height, and ensure that it's at least 1.
@@ -137,13 +141,13 @@ int main(void)
   }
 
   // Camera
-  double focal_length = 1.0;
-  double viewport_height = 2.0;
-  double viewport_width = viewport_height * ((double)image_width / image_height);
+  float focal_length = 1.0;
+  float viewport_height = 2.0;
+  float viewport_width = viewport_height * ((float)image_width / image_height);
 
   RT_DEBUG("viewport: %f %f", viewport_width, viewport_height);
 
-  point3_t camera_center = {0, 0, 0};
+  point3_t camera_center = {0, 0, 1};
   RT_DEBUG("camera_center: %f %f %f", camera_center.x, camera_center.y, camera_center.z);
 
   // Calculate the vectors across the horizontal and down the vertical viewport

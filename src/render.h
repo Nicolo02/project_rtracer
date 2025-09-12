@@ -1,10 +1,10 @@
 #include "ray.h"
 #include "utils.h"
 
-__global__ void kernelrender(double* device_rand_nums, point3_t *device_buffer, int* device_num_samples, point3_t *device_loc00, point3_t *device_camera_center,
+__global__ void kernelrender(float* device_rand_nums, point3_t *device_buffer, int* device_num_samples, point3_t *device_loc00, point3_t *device_camera_center,
                                        point3_t *device_pixel_delta_u, point3_t *device_pixel_delta_v, sphere_t *device_world);
 
-__global__ void lightkernelrender(double* device_rand_nums, point3_t *device_buffer, int* device_num_samples, point3_t *device_loc00, point3_t *device_camera_center,
+__global__ void lightkernelrender(float* device_rand_nums, point3_t *device_buffer, int* device_num_samples, point3_t *device_loc00, point3_t *device_camera_center,
                                        point3_t *device_pixel_delta_u, point3_t *device_pixel_delta_v, sphere_t *device_world);
 
 void checkCudaError(cudaError_t err, const char *msg);

@@ -1,1 +1,1 @@
-double clamp(double x);
+float clamp(float x);

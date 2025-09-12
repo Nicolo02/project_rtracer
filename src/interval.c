@@ -1,9 +1,9 @@
 #include "interval.h"
 
-double clamp(double x)
+float clamp(float x)
 {
-    double min = 0;
-    double max = 0.999;
+    float min = 0;
+    float max = 0.999;
     if (x < min)
         return min;
     if (x > max)

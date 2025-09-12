@@ -62,13 +62,13 @@
 #endif
 
 typedef struct {
-  double x;
-  double y;
-  double z;
+  float x;
+  float y;
+  float z;
 } point3_t;
 
 typedef struct {
-  double inv_scale;
+  float inv_scale;
   bool sphere;
 } checker_texture;
 
@@ -83,13 +83,13 @@ typedef struct {
 typedef struct {
   point3_t orig;
   point3_t dir;
-  double tm;
+  float tm;
 } ray_t;
 
 typedef struct {
   point3_t center_start;
   point3_t center_end;
-  double radius;
+  float radius;
   material mat;
   bool moving;
 } sphere_t;
@@ -97,17 +97,17 @@ typedef struct {
 typedef struct {
   point3_t p;
   point3_t normal;
-  double t;
+  float t;
   bool front_face;
   material mat;
-  double u;
-  double v;
+  float u;
+  float v;
 } hit_record;
 
 // Genera un numero casuale tra 0 e 1
-__host__ double random_double();
+__host__ float random_float();
 
 // Genera un numero casuale tra 0 e 1
-__host__ double random_double_range(double min, double max);
+__host__ float random_float_range(float min, float max);
 
 #endif
