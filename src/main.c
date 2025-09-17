@@ -22,7 +22,6 @@ void write_color(FILE *out, point3_t* pixel_color, int image_width, int image_he
       float g = linear_to_gamma(pixel.y);
       float b = linear_to_gamma(pixel.z);
 
-      // Translate the [0,1] component values to the byte range [0,255].
       int rbyte = (int)(255.999 * clamp(r));
       int gbyte = (int)(255.999 * clamp(g));
       int bbyte = (int)(255.999 * clamp(b));
@@ -62,6 +61,7 @@ void texture_world(sphere_t* world){
   world[2].center_end = temp;
   world[2].radius = 0.5;
   mat.t = metal;
+  mat.fuzz = 0.1;
   mat.albedo = alb_temp;
   world[2].mat = mat;
   world[2].moving = false;
@@ -73,6 +73,7 @@ void texture_world(sphere_t* world){
   world[3].center_end = temp;
   world[3].radius = 0.5;
   mat.albedo = alb_temp;
+  mat.fuzz = 0.8;
   world[3].mat = mat;
   world[3].moving = false;
 }

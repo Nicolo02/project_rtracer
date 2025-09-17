@@ -78,6 +78,7 @@ typedef struct {
   type t;
   point3_t albedo;
   checker_texture tex;
+  float fuzz;
 } material;
 
 typedef struct {

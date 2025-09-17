@@ -11,6 +11,7 @@ __constant__ int device_image_height;
 
 // ATTENZIONE: Da  qui funzioni solo __device__ trasposte qui
 // AGGIUNTO in render.h la inclusione del file utils.h, se da errore, togli
+// Presenza di force inline nelle funzioni più semplici per tentare di aumentare l'efficienza anche se di poco (attorno 50 ms)
 
 __device__ __forceinline__ point3_t vec3_mul_sc_CUDA(point3_t one, float two) { // Moltip. per uno scalare
   point3_t result = {one.x * two, one.y * two, one.z * two};
@@ -69,18 +70,7 @@ __device__ __forceinline__ point3_t ray_at(ray_t r, float dist)
 __device__ void set_face_normal(ray_t r, point3_t outward_normal, hit_record *rec)
 {
     rec->front_face = vec3_dot_cuda(r.dir, outward_normal) < 0;
-    /*
-    if (rec->front_face)
-    {
-        rec->normal = outward_normal;
-    }
-    else
-    {
-        rec->normal = vec3_mul_sc_CUDA(outward_normal, -1);
-    }
-    */
-
-   rec->normal = rec->front_face ? outward_normal : vec3_mul_sc_CUDA(outward_normal, -1);
+    rec->normal = rec->front_face ? outward_normal : vec3_mul_sc_CUDA(outward_normal, -1);
 }
 
 __device__ point3_t emitted(hit_record rec){
@@ -88,7 +78,7 @@ __device__ point3_t emitted(hit_record rec){
         return {0,0,0};
     }
 
-    point3_t light = {4,4,4};
+    point3_t light = {10,10,10};
 
     return light;
 }  
@@ -152,22 +142,28 @@ __device__ point3_t vec3_reflect(point3_t vec, point3_t norm)
     return result;
 }
 
-__device__ bool scatter_metal(hit_record rec, point3_t rand_unit, point3_t *attenuation, ray_t *scattered, point3_t albedo, float time)
+__device__ bool scatter_metal(hit_record rec, point3_t rand_unit, point3_t *attenuation, ray_t *scattered, point3_t albedo, float time, point3_t in_dir)
 {
-    point3_t reflected = vec3_reflect(rec.normal, rand_unit);
+    point3_t unit_in = vec3_unit_vector(in_dir);
+    point3_t reflected = vec3_reflect(unit_in, rec.normal);
+
+    point3_t fuzz_vec = vec3_mul_sc_CUDA(rand_unit, rec.mat.fuzz);
     scattered->orig = rec.p;
-    scattered->dir = reflected;
+    scattered->dir = vec3_sum_CUDA(reflected, fuzz_vec);
     scattered->tm = time;
+
     attenuation->x = albedo.x;
     attenuation->y = albedo.y;
     attenuation->z = albedo.z;
 
-    return true;
+    if (vec3_dot_cuda(scattered->dir, rec.normal) > 0.0f)
+        return true;
+    return false;
 }
 
 __device__ bool vec3_near_zero(point3_t v)
 {
-    float s = 1e-8; // Soglia di tolleranza
+    double s = 1e-8; // Soglia di tolleranza
     return (fabs(v.x) < s) && (fabs(v.y) < s) && (fabs(v.z) < s);
 }
 
@@ -244,7 +240,7 @@ __device__ point3_t background_color(ray_t r)
 }
 
 
-__device__ point3_t ray_color(ray_t ray, sphere_t *world, point3_t rand_unit)
+__device__ point3_t ray_color(ray_t ray, sphere_t *world, curandState *state)
 {
     hit_record rec;
     hit_record temp_rec;
@@ -269,8 +265,11 @@ __device__ point3_t ray_color(ray_t ray, sphere_t *world, point3_t rand_unit)
         {
             ray_t scattered;
             point3_t attenuation;
-            
-            if (rec.mat.t == 0 && scatter_metal(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm))
+
+            point3_t rand_unit = {(float)(curand_normal(state)),(float)(curand_normal(state)),(float)(curand_normal(state))};
+            rand_unit = vec3_unit_vector(rand_unit);
+
+            if (rec.mat.t == 0 && scatter_metal(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm, cur_ray.dir))
             {
                 res = vec3_mul(attenuation, res);
                 cur_ray = scattered;
@@ -339,7 +338,7 @@ __device__ point3_t light_ray_color(ray_t ray, sphere_t *world, curandState *sta
         point3_t rand_unit = {(float)(curand_uniform(state)*2.0 -1.0),(float)(curand_uniform(state)*2.0 -1.0),(float)(curand_uniform(state)*2.0 -1.0)};
         rand_unit = vec3_unit_vector(rand_unit);
         
-        if ((rec.mat.t == lambertian && !scatter_lambert(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm)) || (rec.mat.t == metal && !scatter_metal(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm)) || rec.mat.t == diffuse_light){
+        if ((rec.mat.t == lambertian && !scatter_lambert(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm)) || (rec.mat.t == metal && !scatter_metal(rec, rand_unit, &attenuation, &scattered, rec.mat.albedo, cur_ray.tm, cur_ray.dir)) || rec.mat.t == diffuse_light){
           break;
         }
 
@@ -385,21 +384,23 @@ __global__ void kernelrender(curandState* rand, point3_t *device_buffer, int *de
     point3_t pixel_delta_v = *device_pixel_delta_v;
     int n_samples = *device_num_samples;
 
-    int i = threadIdx.x;
-    int j = blockIdx.y;
-    int tid = i + j*blockDim.x;
-    curandState state = rand[tid];
-    //int index = tid * (n_samples + 2);
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    if (i >= image_width || j >= image_height) return;
 
-    if (i >= image_width || j >= image_height)
-    {
-        return;
-    }
+    int tid = j * image_width + i;
+    curandState state = rand[tid];
 
     point3_t pixel_color;
     pixel_color.x = 0;
     pixel_color.y = 0;
     pixel_color.z = 0;
+
+    __shared__ sphere_t s_cache[num_s];
+    if (threadIdx.x < num_s) {
+        s_cache[threadIdx.x] = device_world[threadIdx.x];
+    }
+    __syncthreads();
 /*
     float temp1 = curand_uniform(&rand[tid]);
     float temp2 = curand_uniform(&rand[tid]);
@@ -407,14 +408,13 @@ __global__ void kernelrender(curandState* rand, point3_t *device_buffer, int *de
     debug[index] = temp1;
     debug[index + 1] = temp2;
 */
-    point3_t rand_unit = {curand_uniform(&state), curand_uniform(&state), 0};
 
     for (int k = 0; k < n_samples; k++)
     {
         //temp1 = curand_uniform(&rand[tid]);
         //debug[index+k] = temp1;
         ray_t r = get_ray_sample(curand_uniform(&state), curand_uniform(&state), i, j, loc00, camera_center, pixel_delta_u, pixel_delta_v, &state);
-        pixel_color = vec3_sum_CUDA(ray_color(r, device_world, rand_unit), pixel_color);
+        pixel_color = vec3_sum_CUDA(ray_color(r, s_cache, &state), pixel_color);
     }
 
     device_buffer[j * image_width + i] = vec3_div_sc_CUDA(pixel_color, n_samples);
@@ -459,7 +459,6 @@ __global__ void lightkernelrender(curandState* rand, point3_t *device_buffer, in
     debug[index] = temp1;
     debug[index + 1] = temp2;
 */
-    //point3_t rand_unit = {curand_uniform(&state), curand_uniform(&state), 0};
 
     for (int k = 0; k < n_samples; k++)
     {
@@ -520,8 +519,8 @@ extern "C" void render(point3_t *host_buffer, int n_samples, int image_width, in
     //float* dev_debug_random;
     //cudaMalloc(&dev_debug_random, sizeof(float) * image_width * image_height * (n_samples + 2)); // max 10 valori per pixel
 
-    dim3 grid(1, image_height, 1);
-    dim3 block(image_width, 1, 1);
+    dim3 block(16, 16);
+    dim3 grid((image_width + block.x - 1) / block.x, (image_height + block.y - 1) / block.y);
 
     //PER DEBUG:
     //int total_curand_states = image_width * image_height * (n_samples + 2);
