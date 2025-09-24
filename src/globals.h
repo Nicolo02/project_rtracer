@@ -5,9 +5,9 @@
 #define num_s 4
 
 //Numero di sample per pixel
-#define num_samples 100
+#define num_samples 200
 
 //Massimo numero di volte che ray_color viene chiamato in ricorsione
-#define num_depth 500
+#define num_depth 700
 
 #endif

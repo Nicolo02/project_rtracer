@@ -50,7 +50,7 @@ void texture_world(sphere_t* world){
   world[1].radius = 0.5;
   mat.albedo = alb_temp;
   world[1].mat = mat;
-  world[1].moving = false;
+  world[1].moving = true;
 
   mat.tex.inv_scale = 0.0;
   mat.tex.sphere = false;
@@ -61,7 +61,7 @@ void texture_world(sphere_t* world){
   world[2].center_end = temp;
   world[2].radius = 0.5;
   mat.t = metal;
-  mat.fuzz = 0.1;
+  mat.fuzz = 0.05;
   mat.albedo = alb_temp;
   world[2].mat = mat;
   world[2].moving = false;
@@ -73,7 +73,7 @@ void texture_world(sphere_t* world){
   world[3].center_end = temp;
   world[3].radius = 0.5;
   mat.albedo = alb_temp;
-  mat.fuzz = 0.8;
+  mat.fuzz = 0.4;
   world[3].mat = mat;
   world[3].moving = false;
 }
